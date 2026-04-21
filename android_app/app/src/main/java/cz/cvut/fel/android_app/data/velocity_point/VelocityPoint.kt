@@ -19,6 +19,7 @@ import cz.cvut.fel.android_app.data.stream_segment.StreamSegment
     ],
     indices = [Index("segment_id")]
 )
+
 data class VelocityPoint(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "segment_id") val segmentId: Int,

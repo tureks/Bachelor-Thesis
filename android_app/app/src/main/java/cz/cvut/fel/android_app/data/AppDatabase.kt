@@ -1,4 +1,4 @@
-package cz.cvut.fel.android_app.data.db
+package cz.cvut.fel.android_app.data
 
 import android.content.Context
 import androidx.room.Database

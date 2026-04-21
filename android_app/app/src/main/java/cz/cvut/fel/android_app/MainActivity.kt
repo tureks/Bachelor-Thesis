@@ -4,44 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.viewModels
 import cz.cvut.fel.android_app.ui.theme.Android_appTheme
+import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val measurementViewModel: MeasurementViewModel by viewModels { MeasurementViewModel.Factory }
+    private val deviceViewModel: DeviceViewModel by viewModels { DeviceViewModel.Factory }
+    private val userViewModel: UserViewModel by viewModels { UserViewModel.Factory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Android_appTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Android_appTheme {
-        Greeting("Android")
     }
 }

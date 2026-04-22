@@ -14,7 +14,7 @@ import cz.cvut.fel.android_app.data.stream_segment.StreamSegment
             entity = StreamSegment::class,
             parentColumns = ["id"],
             childColumns = ["segment_id"],
-            onDelete = ForeignKey.Companion.CASCADE
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index("segment_id")]

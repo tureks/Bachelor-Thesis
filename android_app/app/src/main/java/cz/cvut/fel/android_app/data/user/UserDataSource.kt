@@ -19,8 +19,8 @@ class UserDataSource(private val context: Context) {
         private val FIRST_NAME = stringPreferencesKey("first_name")
         private val LAST_NAME = stringPreferencesKey("last_name")
         private val EMAIL = stringPreferencesKey("email")
-        private val MULTIPOINT_MEASUREMENT= booleanPreferencesKey("multipoint_measurement")
-        private val SINGLEPOINT_HEIGHT= doublePreferencesKey("singlepoint_height")
+        private val MULTIPOINT_MEASUREMENT = booleanPreferencesKey("multipoint_measurement")
+        private val SINGLEPOINT_HEIGHT = doublePreferencesKey("singlepoint_height")
     }
 
     val user: Flow<User?> = context.dataStore.data.map { prefs ->

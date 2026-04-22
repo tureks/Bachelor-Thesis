@@ -1,7 +1,11 @@
 package cz.cvut.fel.android_app
 
 import android.app.Application
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import cz.cvut.fel.android_app.data.AppDatabase
+import cz.cvut.fel.android_app.data.bluetooth.BleRepository
+import cz.cvut.fel.android_app.data.bluetooth.LocalBleRepository
 import cz.cvut.fel.android_app.data.device.DeviceRepository
 import cz.cvut.fel.android_app.data.device.LocalDeviceRepository
 import cz.cvut.fel.android_app.data.measurement.LocalStreamMeasurementRepository
@@ -24,5 +28,10 @@ class App : Application() {
             database.streamSegmentDao(),
             database.velocityPointDao()
         )
+    }
+
+    val bleRepository: BleRepository by lazy {
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        LocalBleRepository(this, bluetoothManager.adapter)
     }
 }

@@ -14,7 +14,7 @@ import cz.cvut.fel.android_app.data.measurement.StreamMeasurement
             entity = StreamMeasurement::class,
             parentColumns = ["id"],
             childColumns = ["measurement_id"],
-            onDelete = ForeignKey.Companion.CASCADE
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index("measurement_id")]

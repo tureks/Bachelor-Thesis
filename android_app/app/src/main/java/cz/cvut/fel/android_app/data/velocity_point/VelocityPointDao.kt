@@ -7,10 +7,10 @@ import androidx.room.Query
 @Dao
 interface VelocityPointDao {
     @Query("SELECT id, segment_id, velocity, measure_height FROM velocity_point WHERE segment_id = :segmentId")
-    suspend fun getBySegmentId(segmentId: Int): List<VelocityPoint>
+    suspend fun getBySegmentId(segmentId: Int): List<VelocityPointEntity>
 
     @Insert
-    suspend fun insert(point: VelocityPoint): Long
+    suspend fun insert(point: VelocityPointEntity): Long
 
     @Query("DELETE FROM velocity_point WHERE segment_id = :segmentId")
     suspend fun deleteBySegmentId(segmentId: Int)

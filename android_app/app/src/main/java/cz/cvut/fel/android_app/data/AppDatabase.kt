@@ -4,21 +4,21 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import cz.cvut.fel.android_app.data.device.Device
+import cz.cvut.fel.android_app.data.device.DeviceEntity
 import cz.cvut.fel.android_app.data.device.DeviceDao
-import cz.cvut.fel.android_app.data.measurement.StreamMeasurement
+import cz.cvut.fel.android_app.data.measurement.StreamMeasurementEntity
 import cz.cvut.fel.android_app.data.measurement.StreamMeasurementDao
-import cz.cvut.fel.android_app.data.stream_segment.StreamSegment
+import cz.cvut.fel.android_app.data.stream_segment.StreamSegmentEntity
 import cz.cvut.fel.android_app.data.stream_segment.StreamSegmentDao
-import cz.cvut.fel.android_app.data.velocity_point.VelocityPoint
+import cz.cvut.fel.android_app.data.velocity_point.VelocityPointEntity
 import cz.cvut.fel.android_app.data.velocity_point.VelocityPointDao
 
 @Database(
     entities = [
-        Device::class,
-        StreamMeasurement::class,
-        StreamSegment::class,
-        VelocityPoint::class
+        DeviceEntity::class,
+        StreamMeasurementEntity::class,
+        StreamSegmentEntity::class,
+        VelocityPointEntity::class
     ],
     version = 1
 )

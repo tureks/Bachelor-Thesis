@@ -4,15 +4,15 @@ import android.app.Application
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import cz.cvut.fel.android_app.data.AppDatabase
-import cz.cvut.fel.android_app.data.bluetooth.BleRepository
 import cz.cvut.fel.android_app.data.bluetooth.LocalBleRepository
-import cz.cvut.fel.android_app.data.device.DeviceRepository
 import cz.cvut.fel.android_app.data.device.LocalDeviceRepository
 import cz.cvut.fel.android_app.data.measurement.LocalStreamMeasurementRepository
-import cz.cvut.fel.android_app.data.measurement.StreamMeasurementRepository
 import cz.cvut.fel.android_app.data.user.LocalUserRepository
 import cz.cvut.fel.android_app.data.user.UserDataSource
-import cz.cvut.fel.android_app.data.user.UserRepository
+import cz.cvut.fel.android_app.domain.repository.BleRepository
+import cz.cvut.fel.android_app.domain.repository.DeviceRepository
+import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
+import cz.cvut.fel.android_app.domain.repository.UserRepository
 
 class App : Application() {
 

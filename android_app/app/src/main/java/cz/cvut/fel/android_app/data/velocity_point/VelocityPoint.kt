@@ -5,13 +5,13 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import cz.cvut.fel.android_app.data.stream_segment.StreamSegment
+import cz.cvut.fel.android_app.data.stream_segment.StreamSegmentEntity
 
 @Entity(
     tableName = "velocity_point",
     foreignKeys = [
         ForeignKey(
-            entity = StreamSegment::class,
+            entity = StreamSegmentEntity::class,
             parentColumns = ["id"],
             childColumns = ["segment_id"],
             onDelete = ForeignKey.CASCADE
@@ -19,8 +19,7 @@ import cz.cvut.fel.android_app.data.stream_segment.StreamSegment
     ],
     indices = [Index("segment_id")]
 )
-
-data class VelocityPoint(
+data class VelocityPointEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "segment_id") val segmentId: Int,
     val velocity: Double,

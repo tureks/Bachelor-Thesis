@@ -9,13 +9,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DeviceDao {
     @Query("SELECT id, name, mac_address, last_connected FROM device ORDER BY last_connected DESC")
-    fun getAll(): Flow<List<Device>>
+    fun getAll(): Flow<List<DeviceEntity>>
 
     @Insert
-    suspend fun insert(device: Device): Long
+    suspend fun insert(device: DeviceEntity): Long
 
     @Delete
-    suspend fun delete(device: Device)
+    suspend fun delete(device: DeviceEntity)
 
     @Query("UPDATE device SET last_connected = :timestamp WHERE id = :id")
     suspend fun updateLastConnected(id: Int, timestamp: Long)

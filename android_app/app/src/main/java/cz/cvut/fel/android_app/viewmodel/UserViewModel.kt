@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cz.cvut.fel.android_app.App
-import cz.cvut.fel.android_app.data.user.UserRepository
+import cz.cvut.fel.android_app.domain.repository.UserRepository
 
 class UserViewModel(
     private val repository: UserRepository

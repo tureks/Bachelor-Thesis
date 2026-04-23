@@ -10,20 +10,20 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StreamMeasurementDao {
     @Query("SELECT id, reference_model, name, note, location, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE status = 'COMPLETE' ORDER BY measure_timestamp DESC")
-    fun getCompleted(): Flow<List<StreamMeasurement>>
+    fun getCompleted(): Flow<List<StreamMeasurementEntity>>
 
     @Query("SELECT id, reference_model, name, note, location, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE status = 'DRAFT' LIMIT 1")
-    suspend fun getDraft(): StreamMeasurement?
+    suspend fun getDraft(): StreamMeasurementEntity?
 
     @Query("SELECT id, reference_model, name, note, location, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE id = :id")
-    suspend fun getById(id: Int): StreamMeasurement?
+    suspend fun getById(id: Int): StreamMeasurementEntity?
 
     @Insert
-    suspend fun insert(measurement: StreamMeasurement): Long
+    suspend fun insert(measurement: StreamMeasurementEntity): Long
 
     @Update
-    suspend fun update(measurement: StreamMeasurement)
+    suspend fun update(measurement: StreamMeasurementEntity)
 
     @Delete
-    suspend fun delete(measurement: StreamMeasurement)
+    suspend fun delete(measurement: StreamMeasurementEntity)
 }

@@ -1,5 +1,7 @@
 package cz.cvut.fel.android_app.data.user
 
+import cz.cvut.fel.android_app.domain.model.User
+import cz.cvut.fel.android_app.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 
 class LocalUserRepository(private val dataSource: UserDataSource) : UserRepository {

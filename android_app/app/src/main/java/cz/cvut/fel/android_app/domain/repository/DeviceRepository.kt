@@ -1,5 +1,6 @@
-package cz.cvut.fel.android_app.data.device
+package cz.cvut.fel.android_app.domain.repository
 
+import cz.cvut.fel.android_app.domain.model.Device
 import kotlinx.coroutines.flow.Flow
 
 interface DeviceRepository {

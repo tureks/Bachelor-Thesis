@@ -5,13 +5,14 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import cz.cvut.fel.android_app.data.device.Device
+import cz.cvut.fel.android_app.data.device.DeviceEntity
+import cz.cvut.fel.android_app.domain.model.StreamMeasurementStatus
 
 @Entity(
     tableName = "stream_measurement",
     foreignKeys = [
         ForeignKey(
-            entity = Device::class,
+            entity = DeviceEntity::class,
             parentColumns = ["id"],
             childColumns = ["device_id"],
             onDelete = ForeignKey.SET_NULL
@@ -19,7 +20,7 @@ import cz.cvut.fel.android_app.data.device.Device
     ],
     indices = [Index("device_id")]
 )
-data class StreamMeasurement(
+data class StreamMeasurementEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "reference_model") val referenceModel: Int,
     val name: String,

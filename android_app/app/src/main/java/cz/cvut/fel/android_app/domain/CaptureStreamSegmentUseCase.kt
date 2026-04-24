@@ -16,6 +16,6 @@ class CaptureStreamSegmentUseCase(val windowSize: Int = DEFAULT_WINDOW_SIZE) {
             .map { it.average() }
 
     companion object {
-        const val DEFAULT_WINDOW_SIZE = 50
+        const val DEFAULT_WINDOW_SIZE = 100
     }
 }

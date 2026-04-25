@@ -5,5 +5,6 @@ data class User(
     val lastName: String,
     val email: String,
     val multipointMeasurement: Boolean,
-    val singlePointHeight: Double
+    val singlePointHeight: Double,
+    val preferredUnit: MeasurementUnit = MeasurementUnit.HYDROMETRIC
 )

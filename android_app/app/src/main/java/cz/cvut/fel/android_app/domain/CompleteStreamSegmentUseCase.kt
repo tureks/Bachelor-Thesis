@@ -1,18 +1,22 @@
 package cz.cvut.fel.android_app.domain
 
 import cz.cvut.fel.android_app.domain.model.CapturedVelocityPoint
+import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
+import cz.cvut.fel.android_app.domain.repository.UserRepository
+import kotlinx.coroutines.flow.first
 
 class CompleteStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
+    private val userRepository: UserRepository,
     private val calculateUseCase: CalculateStreamSegmentUseCase
 ) {
 
     /**
      * Finalizes the segment by saving it and its associated points to the database.
-     * Automatically determines the next segment number and handles manual point overrides.
+     * Inputs (segmentWidth, depth) are expected in the user's preferred unit (cm or m).
      */
     suspend operator fun invoke(
         measurementId: Int,
@@ -21,14 +25,21 @@ class CompleteStreamSegmentUseCase(
         points: List<CapturedVelocityPoint>,
         selectedIndices: Set<Int>
     ) {
+        val user = userRepository.user.first()
+        val isHydrometric = user?.preferredUnit == MeasurementUnit.HYDROMETRIC
+
+        // Convert UI inputs to Metric (m) if they were entered in cm
+        val widthMetric = if (isHydrometric) segmentWidth / 100.0 else segmentWidth
+        val depthMetric = if (isHydrometric) depth / 100.0 else depth
+
         // Determine the next segment number based on existing count
         val existingSegments = repository.getSegments(measurementId)
         val nextNumber = existingSegments.size + 1
 
-        // Get the final calculation
-        val result = calculateUseCase(segmentWidth, depth, points, selectedIndices)
+        // Get the final calculation (always works in Metric internally)
+        val result = calculateUseCase(widthMetric, depthMetric, points, selectedIndices)
 
-        // Map to the persistence model (StreamSegment)
+        // Map to the persistence model (StreamSegment) - always stored in meters
         val segment = StreamSegment(
             measurementId = measurementId,
             segmentNumber = nextNumber,

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,7 @@ class UserDataSource(private val context: Context) {
         private val EMAIL = stringPreferencesKey("email")
         private val MULTIPOINT_MEASUREMENT = booleanPreferencesKey("multipoint_measurement")
         private val SINGLEPOINT_HEIGHT = doublePreferencesKey("singlepoint_height")
+        private val PREFERRED_UNIT = stringPreferencesKey("preferred_unit")
     }
 
     val user: Flow<User?> = context.dataStore.data.map { prefs ->
@@ -30,7 +32,8 @@ class UserDataSource(private val context: Context) {
         val email = prefs[EMAIL] ?: return@map null
         val multipointMeasurement = prefs[MULTIPOINT_MEASUREMENT] ?: return@map null
         val singlePointHeight = prefs[SINGLEPOINT_HEIGHT] ?: return@map null
-        User(firstName, lastName, email, multipointMeasurement, singlePointHeight)
+        val preferredUnit = prefs[PREFERRED_UNIT]?.let { MeasurementUnit.valueOf(it) } ?: MeasurementUnit.HYDROMETRIC
+        User(firstName, lastName, email, multipointMeasurement, singlePointHeight, preferredUnit)
     }
 
     suspend fun saveUser(user: User) {
@@ -40,6 +43,7 @@ class UserDataSource(private val context: Context) {
             prefs[EMAIL] = user.email
             prefs[MULTIPOINT_MEASUREMENT] = user.multipointMeasurement
             prefs[SINGLEPOINT_HEIGHT] = user.singlePointHeight
+            prefs[PREFERRED_UNIT] = user.preferredUnit.name
         }
     }
 

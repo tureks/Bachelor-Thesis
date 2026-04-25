@@ -2,6 +2,7 @@ package cz.cvut.fel.android_app.data.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -42,7 +43,12 @@ class LocalBleRepository(
                 return
             }
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> gatt.discoverServices()
+                BluetoothProfile.STATE_CONNECTED -> {
+                    if (gatt.device.bondState == BluetoothDevice.BOND_NONE) {
+                        gatt.device.createBond()
+                    }
+                    gatt.discoverServices()
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     _connectionState.value = BleConnectionState.Disconnected
                     gatt.close()
@@ -127,9 +133,8 @@ class LocalBleRepository(
     }
 
     companion object {
-        // TODO: add actual uuid from the microcontroller
-        private val SERVICE_UUID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
-        private val VELOCITY_CHAR_UUID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001")
+        private val SERVICE_UUID: UUID = UUID.fromString("a177eaf2-c661-4f76-b07d-36826eca67bd")
+        private val VELOCITY_CHAR_UUID: UUID = UUID.fromString("0f6866f4-8a14-43a9-b7e4-93075f456d5c")
         private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }

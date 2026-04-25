@@ -13,6 +13,7 @@ import android.os.Build
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
+import cz.cvut.fel.android_app.domain.model.BleException
 import cz.cvut.fel.android_app.domain.model.Device
 import cz.cvut.fel.android_app.domain.repository.BleRepository
 import cz.cvut.fel.android_app.domain.repository.DeviceRepository
@@ -70,7 +71,12 @@ class LocalBleRepository(
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                _connectionState.value = BleConnectionState.Error(status)
+                val exception = when (status) {
+                    8 -> BleException.ConnectionTimeout
+                    133 -> BleException.DeviceNotFound
+                    else -> BleException.Unknown(status)
+                }
+                _connectionState.value = BleConnectionState.Error(exception)
                 gatt.close()
                 this@LocalBleRepository.gatt = null
                 return
@@ -92,7 +98,7 @@ class LocalBleRepository(
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                _connectionState.value = BleConnectionState.Error(status)
+                _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
                 return
             }
 
@@ -100,7 +106,7 @@ class LocalBleRepository(
             if (velocityChar != null) {
                 enableNotifications(gatt, velocityChar)
             } else {
-                _connectionState.value = BleConnectionState.Error(-1)
+                _connectionState.value = BleConnectionState.Error(BleException.ServicesNotSupported)
                 return
             }
         }
@@ -108,7 +114,7 @@ class LocalBleRepository(
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             if (descriptor.uuid != CCCD_UUID) return
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                _connectionState.value = BleConnectionState.Error(status)
+                _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
                 return
             }
 
@@ -180,7 +186,7 @@ class LocalBleRepository(
     private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         gatt.setCharacteristicNotification(characteristic, true)
         val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: run {
-            _connectionState.value = BleConnectionState.Error(-2)
+            _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

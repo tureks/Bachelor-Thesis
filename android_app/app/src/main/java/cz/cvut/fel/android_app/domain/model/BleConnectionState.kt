@@ -5,5 +5,5 @@ sealed class BleConnectionState {
     data object Connecting : BleConnectionState()
     data class Connected(val deviceAddress: String) : BleConnectionState()
     data object Disconnected : BleConnectionState()
-    data class Error(val reason: Int) : BleConnectionState()
+    data class Error(val exception: BleException) : BleConnectionState()
 }

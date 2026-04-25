@@ -12,6 +12,7 @@ class CompleteStreamSegmentUseCase(
 
     /**
      * Finalizes the segment by saving it and its associated points to the database.
+     * Automatically determines the next segment number and handles manual point overrides.
      */
     suspend operator fun invoke(
         measurementId: Int,

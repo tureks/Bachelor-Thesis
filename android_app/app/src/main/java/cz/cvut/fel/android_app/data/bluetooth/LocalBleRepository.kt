@@ -15,26 +15,33 @@ import android.bluetooth.le.ScanResult
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.domain.model.Device
 import cz.cvut.fel.android_app.domain.repository.BleRepository
+import cz.cvut.fel.android_app.domain.repository.DeviceRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @SuppressLint("MissingPermission")
 class LocalBleRepository(
     private val context: Context,
-    private val bluetoothAdapter: BluetoothAdapter
+    private val bluetoothAdapter: BluetoothAdapter,
+    private val deviceRepository: DeviceRepository
 ) : BleRepository {
 
+    private val scope = CoroutineScope(Dispatchers.IO)
     @Volatile private var gatt: BluetoothGatt? = null
 
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
     override val connectionState = _connectionState.asStateFlow()
 
-    private val _velocityReadings = MutableSharedFlow<Double>(extraBufferCapacity = 64)
+    private val _velocityReadings = MutableSharedFlow<Double>(extraBufferCapacity = 128)
     override val velocityReadings: Flow<Double> = _velocityReadings.asSharedFlow()
 
     private val _batteryLevel = MutableStateFlow<Int>(0)
@@ -89,7 +96,6 @@ class LocalBleRepository(
                 return
             }
 
-            // Enable Velocity Notifications
             val velocityChar = gatt.getService(SERVICE_UUID)?.getCharacteristic(VELOCITY_CHAR_UUID)
             if (velocityChar != null) {
                 enableNotifications(gatt, velocityChar)
@@ -106,7 +112,6 @@ class LocalBleRepository(
                 return
             }
 
-            // If we just enabled Velocity, now enable Battery
             if (descriptor.characteristic.uuid == VELOCITY_CHAR_UUID) {
                 val batteryChar = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_CHAR_UUID)
                 if (batteryChar != null) {
@@ -122,21 +127,23 @@ class LocalBleRepository(
         private fun finishConnection(gatt: BluetoothGatt) {
             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
             _connectionState.value = BleConnectionState.Connected(gatt.device.address)
+            
+            // Update last connected timestamp in DB
+            scope.launch {
+                val address = gatt.device.address
+                val knownDevices = deviceRepository.getAll().firstOrNull() ?: emptyList()
+                knownDevices.find { it.macAddress == address }?.let { device ->
+                    deviceRepository.updateLastConnected(device.id, System.currentTimeMillis())
+                }
+            }
         }
 
         @Suppress("DEPRECATION", "OverridingDeprecatedMember")
-        override fun onCharacteristicChanged(
-            gatt: BluetoothGatt,
-            characteristic: BluetoothGattCharacteristic
-        ) {
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             handleCharacteristicChanged(characteristic.uuid, characteristic.value)
         }
 
-        override fun onCharacteristicChanged(
-            gatt: BluetoothGatt,
-            characteristic: BluetoothGattCharacteristic,
-            value: ByteArray
-        ) {
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             handleCharacteristicChanged(characteristic.uuid, value)
         }
     }
@@ -168,9 +175,7 @@ class LocalBleRepository(
         bluetoothAdapter.bluetoothLeScanner?.stopScan(scanCallback)
     }
 
-    override fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter.isEnabled
-    }
+    override fun isBluetoothEnabled(): Boolean = bluetoothAdapter.isEnabled
 
     private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         gatt.setCharacteristicNotification(characteristic, true)
@@ -190,7 +195,9 @@ class LocalBleRepository(
 
     private fun parseAndEmitVelocity(bytes: ByteArray) {
         val value = bytes.toString(Charsets.UTF_8).trim().toDoubleOrNull() ?: return
-        _velocityReadings.tryEmit(value)
+        scope.launch {
+            _velocityReadings.emit(value)
+        }
     }
 
     private fun parseAndEmitBattery(bytes: ByteArray) {
@@ -203,7 +210,6 @@ class LocalBleRepository(
         private val SERVICE_UUID: UUID = UUID.fromString("a177eaf2-c661-4f76-b07d-36826eca67bd")
         private val VELOCITY_CHAR_UUID: UUID = UUID.fromString("0f6866f4-8a14-43a9-b7e4-93075f456d5c")
         private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-        
         private val BATTERY_SERVICE_UUID: UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
         private val BATTERY_LEVEL_CHAR_UUID: UUID = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
     }

@@ -3,7 +3,7 @@ package cz.cvut.fel.android_app.domain
 import cz.cvut.fel.android_app.domain.repository.BleRepository
 import kotlinx.coroutines.flow.Flow
 
-class GetBatteryLevelUseCase(
+class ObserveBatteryLevelUseCase(
     private val bleRepository: BleRepository
 ) {
     /**

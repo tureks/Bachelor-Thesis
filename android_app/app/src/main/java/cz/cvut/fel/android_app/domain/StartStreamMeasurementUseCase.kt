@@ -18,7 +18,7 @@ class StartStreamMeasurementUseCase(
 
         // Create a new draft
         val newMeasurement = StreamMeasurement(
-            referenceModel = 0, // Default or selected later
+            referenceModel = 0,
             name = name,
             note = null,
             location = null,

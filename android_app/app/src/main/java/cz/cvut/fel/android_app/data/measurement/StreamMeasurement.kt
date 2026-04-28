@@ -25,7 +25,6 @@ data class StreamMeasurementEntity(
     @ColumnInfo(name = "reference_model") val referenceModel: Int,
     val name: String,
     val note: String?,
-    val location: String?,
     @ColumnInfo(name = "measure_timestamp") val measureTimestamp: Long,
     @ColumnInfo(name = "gps_lat") val gpsLat: Double?,
     @ColumnInfo(name = "gps_long") val gpsLong: Double?,

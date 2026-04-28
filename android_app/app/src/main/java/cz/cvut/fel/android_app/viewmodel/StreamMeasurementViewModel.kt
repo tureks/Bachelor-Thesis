@@ -34,6 +34,7 @@ class StreamMeasurementViewModel(
     private val captureSegmentUseCase: CaptureStreamSegmentUseCase,
     private val completeSegmentUseCase: CompleteStreamSegmentUseCase,
     private val completeMeasurementUseCase: CompleteStreamMeasurementUseCase,
+    private val cancelMeasurementUseCase: CancelStreamMeasurementUseCase,
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase,
     private val observeBleStateUseCase: ObserveBleConnectionStateUseCase,
     private val observeBatteryUseCase: ObserveBatteryLevelUseCase,
@@ -155,6 +156,16 @@ class StreamMeasurementViewModel(
         }
     }
 
+    /**
+     * Cancels and deletes the current draft.
+     */
+    fun cancelMeasurement() {
+        viewModelScope.launch {
+            cancelMeasurementUseCase()
+            _uiState.update { it.copy(measurement = null, segments = emptyList(), totals = null) }
+        }
+    }
+
     private suspend fun refreshData(measurementId: Int) {
         val totals = getSummaryUseCase(measurementId)
         _uiState.update { it.copy(
@@ -182,6 +193,7 @@ class StreamMeasurementViewModel(
                         CalculateStreamSegmentUseCase()
                     ),
                     completeMeasurementUseCase = CompleteStreamMeasurementUseCase(app.measurementRepository, summaryUseCase),
+                    cancelMeasurementUseCase = CancelStreamMeasurementUseCase(app.measurementRepository),
                     getSummaryUseCase = summaryUseCase,
                     observeBleStateUseCase = ObserveBleConnectionStateUseCase(app.bleRepository),
                     observeBatteryUseCase = ObserveBatteryLevelUseCase(app.bleRepository),

@@ -5,7 +5,6 @@ data class StreamMeasurement(
     val referenceModel: Int,
     val name: String,
     val note: String?,
-    val location: String?,
     val measureTimestamp: Long,
     val gpsLat: Double?,
     val gpsLong: Double?,

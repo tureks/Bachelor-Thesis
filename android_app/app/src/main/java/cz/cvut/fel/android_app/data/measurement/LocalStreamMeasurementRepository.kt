@@ -55,12 +55,12 @@ class LocalStreamMeasurementRepository(
 }
 
 private fun StreamMeasurementEntity.toDomain() = StreamMeasurement(
-    id, referenceModel, name, note, location, measureTimestamp,
+    id, referenceModel, name, note, measureTimestamp,
     gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, deviceId, status
 )
 
 private fun StreamMeasurement.toEntity() = StreamMeasurementEntity(
-    id, referenceModel, name, note, location, measureTimestamp,
+    id, referenceModel, name, note, measureTimestamp,
     gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, deviceId, status
 )
 

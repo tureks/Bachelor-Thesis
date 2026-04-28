@@ -13,9 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cz.cvut.fel.android_app.ui.components.base.AppButton
+import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: StreamMeasurementViewModel,
@@ -27,8 +28,8 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Stream Gauging") },
+            AppTopBar(
+                title = "Stream Gauging",
                 actions = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -52,71 +53,41 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // New Measurement Button
-            Button(
+            AppButton(
+                text = "New Measurement",
+                icon = Icons.Default.Add,
                 onClick = {
                     viewModel.startNewMeasurement()
                     onNavigateToMeasurement()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text("New Measurement", style = MaterialTheme.typography.titleMedium)
-            }
+                }
+            )
 
-            // Continue Measurement Button (Conditional)
             if (uiState.measurement != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onNavigateToMeasurement,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(12.dp))
-                    Text("Continue Measurement", style = MaterialTheme.typography.titleMedium)
-                }
+                AppButton(
+                    text = "Continue Measurement",
+                    icon = Icons.Default.PlayArrow,
+                    onClick = onNavigateToMeasurement
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Measurement History Button
-            OutlinedButton(
+            AppButton(
+                text = "Measurement History",
+                icon = Icons.Default.List,
                 onClick = onNavigateToHistory,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(Icons.Default.List, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text("Measurement History", style = MaterialTheme.typography.titleMedium)
-            }
+                isPrimary = false
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Settings Button
-            OutlinedButton(
+            AppButton(
+                text = "Settings",
+                icon = Icons.Default.Settings,
                 onClick = onNavigateToSettings,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text("Settings", style = MaterialTheme.typography.titleMedium)
-            }
+                isPrimary = false
+            )
         }
     }
 }

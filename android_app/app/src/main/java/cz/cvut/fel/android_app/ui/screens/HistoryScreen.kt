@@ -8,8 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import cz.cvut.fel.android_app.ui.components.MeasurementItem
-import cz.cvut.fel.android_app.ui.components.SearchBar
+import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.SearchBar
+import cz.cvut.fel.android_app.ui.components.domain.MeasurementItem
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,13 +32,9 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Measurement History") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Text("<")
-                    }
-                }
+            AppTopBar(
+                title = "Measurement History",
+                onNavigateBack = onNavigateBack
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }

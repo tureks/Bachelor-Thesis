@@ -20,11 +20,20 @@ class LocalStreamMeasurementRepository(
     override fun getCompleted(): Flow<List<StreamMeasurement>> =
         measurementDao.getCompleted().map { list -> list.map { it.toDomain() } }
 
+    override fun getDraftFlow(): Flow<StreamMeasurement?> =
+        measurementDao.getDraftFlow().map { it?.toDomain() }
+
     override suspend fun getDraft(): StreamMeasurement? =
         measurementDao.getDraft()?.toDomain()
 
+    override suspend fun deleteDraft() =
+        measurementDao.deleteDraft()
+
     override suspend fun getById(id: Int): StreamMeasurement? =
         measurementDao.getById(id)?.toDomain()
+
+    override suspend fun deleteById(id: Int) =
+        measurementDao.deleteById(id)
 
     override suspend fun insert(measurement: StreamMeasurement): Long =
         measurementDao.insert(measurement.toEntity())
@@ -37,6 +46,9 @@ class LocalStreamMeasurementRepository(
 
     override suspend fun getSegments(measurementId: Int): List<StreamSegment> =
         segmentDao.getByMeasurementId(measurementId).map { it.toDomain() }
+
+    override fun getSegmentsFlow(measurementId: Int): Flow<List<StreamSegment>> =
+        segmentDao.getByMeasurementIdFlow(measurementId).map { list -> list.map { it.toDomain() } }
 
     override suspend fun insertSegment(segment: StreamSegment): Long =
         segmentDao.insert(segment.toEntity())

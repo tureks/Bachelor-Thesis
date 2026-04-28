@@ -21,7 +21,6 @@ class StartStreamMeasurementUseCase(
             referenceModel = 0,
             name = name,
             note = null,
-            location = null,
             measureTimestamp = System.currentTimeMillis(),
             gpsLat = null,
             gpsLong = null,

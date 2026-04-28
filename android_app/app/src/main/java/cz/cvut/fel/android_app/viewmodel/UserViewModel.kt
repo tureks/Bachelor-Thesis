@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cz.cvut.fel.android_app.App
-import cz.cvut.fel.android_app.domain.UpdateUserProfileUseCase
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.User
 import cz.cvut.fel.android_app.domain.repository.UserRepository
@@ -20,8 +19,7 @@ data class UserUiState(
 )
 
 class UserViewModel(
-    private val userRepository: UserRepository,
-    private val updateUserProfileUseCase: UpdateUserProfileUseCase
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserUiState())
@@ -38,21 +36,21 @@ class UserViewModel(
     fun updatePreferredUnit(unit: MeasurementUnit) {
         val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            updateUserProfileUseCase(currentUser.copy(preferredUnit = unit))
+            userRepository.saveUser(currentUser.copy(preferredUnit = unit))
         }
     }
 
     fun updateMeasurementMode(isMultipoint: Boolean) {
         val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            updateUserProfileUseCase(currentUser.copy(multipointMeasurement = isMultipoint))
+            userRepository.saveUser(currentUser.copy(multipointMeasurement = isMultipoint))
         }
     }
 
     fun updateProfile(firstName: String, lastName: String, email: String) {
         val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            updateUserProfileUseCase(
+            userRepository.saveUser(
                 currentUser.copy(
                     firstName = firstName,
                     lastName = lastName,
@@ -65,7 +63,7 @@ class UserViewModel(
     fun updateSinglePointHeight(height: Double) {
         val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            updateUserProfileUseCase(currentUser.copy(singlePointHeight = height))
+            userRepository.saveUser(currentUser.copy(singlePointHeight = height))
         }
     }
 
@@ -73,10 +71,7 @@ class UserViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as App
-                UserViewModel(
-                    userRepository = app.userRepository,
-                    updateUserProfileUseCase = UpdateUserProfileUseCase(app.userRepository)
-                )
+                UserViewModel(userRepository = app.userRepository)
             }
         }
     }

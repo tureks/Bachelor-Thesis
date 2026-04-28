@@ -7,12 +7,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cz.cvut.fel.android_app.App
-import cz.cvut.fel.android_app.domain.CheckBluetoothAvailabilityUseCase
-import cz.cvut.fel.android_app.domain.ConnectToDeviceUseCase
-import cz.cvut.fel.android_app.domain.ObserveBleConnectionStateUseCase
-import cz.cvut.fel.android_app.domain.ScanDevicesUseCase
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.domain.model.Device
+import cz.cvut.fel.android_app.domain.repository.BleRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -24,25 +21,21 @@ data class DeviceUiState(
 )
 
 class DeviceViewModel(
-    private val scanDevicesUseCase: ScanDevicesUseCase,
-    private val connectToDeviceUseCase: ConnectToDeviceUseCase,
-    private val observeBleStateUseCase: ObserveBleConnectionStateUseCase,
-    private val checkBluetoothUseCase: CheckBluetoothAvailabilityUseCase
+    private val bleRepository: BleRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeviceUiState())
     val uiState: StateFlow<DeviceUiState> = _uiState.asStateFlow()
 
     init {
-        // Observe scanned devices via Use Case
-        scanDevicesUseCase.scannedDevices
+        // Direct observation of Repository flows
+        bleRepository.scannedDevices
             .onEach { devices ->
                 _uiState.update { it.copy(scannedDevices = devices) }
             }
             .launchIn(viewModelScope)
 
-        // Observe connection state via Use Case
-        observeBleStateUseCase()
+        bleRepository.connectionState
             .onEach { state ->
                 _uiState.update { it.copy(connectionState = state) }
             }
@@ -50,24 +43,19 @@ class DeviceViewModel(
     }
 
     fun startScan() {
-        if (!checkBluetoothUseCase.isEnabled()) {
+        if (!bleRepository.isBluetoothEnabled()) {
             _uiState.update { it.copy(error = "Bluetooth is disabled") }
             return
         }
         _uiState.update { it.copy(isScanning = true) }
-        scanDevicesUseCase.startScan()
+        bleRepository.startScanning()
     }
 
     fun stopScan() {
         _uiState.update { it.copy(isScanning = false) }
-        scanDevicesUseCase.stopScan()
+        bleRepository.stopScanning()
     }
 
-    /**
-     * Toggles connection state. 
-     * If already connected to THIS device, it disconnects.
-     * If connected to another or idle, it connects.
-     */
     fun toggleConnection(device: Device) {
         val currentState = _uiState.value.connectionState
         
@@ -75,15 +63,14 @@ class DeviceViewModel(
             when (currentState) {
                 is BleConnectionState.Connected -> {
                     if (currentState.deviceAddress == device.macAddress) {
-                        connectToDeviceUseCase.disconnect()
+                        bleRepository.disconnect()
                     } else {
-                        // Switch device: disconnect current, then connect new
-                        connectToDeviceUseCase.disconnect()
-                        connectToDeviceUseCase(device)
+                        bleRepository.disconnect()
+                        bleRepository.connect(device.macAddress)
                     }
                 }
                 else -> {
-                    connectToDeviceUseCase(device)
+                    bleRepository.connect(device.macAddress)
                 }
             }
         }
@@ -95,19 +82,14 @@ class DeviceViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        scanDevicesUseCase.stopScan()
+        bleRepository.stopScanning()
     }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as App
-                DeviceViewModel(
-                    scanDevicesUseCase = ScanDevicesUseCase(app.bleRepository),
-                    connectToDeviceUseCase = ConnectToDeviceUseCase(app.bleRepository),
-                    observeBleStateUseCase = ObserveBleConnectionStateUseCase(app.bleRepository),
-                    checkBluetoothUseCase = CheckBluetoothAvailabilityUseCase(app.bleRepository)
-                )
+                DeviceViewModel(bleRepository = app.bleRepository)
             }
         }
     }

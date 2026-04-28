@@ -7,12 +7,16 @@ import kotlinx.coroutines.flow.Flow
 
 interface StreamMeasurementRepository {
     fun getCompleted(): Flow<List<StreamMeasurement>>
+    fun getDraftFlow(): Flow<StreamMeasurement?>
     suspend fun getDraft(): StreamMeasurement?
+    suspend fun deleteDraft()
     suspend fun getById(id: Int): StreamMeasurement?
+    suspend fun deleteById(id: Int)
     suspend fun insert(measurement: StreamMeasurement): Long
     suspend fun update(measurement: StreamMeasurement)
     suspend fun delete(measurement: StreamMeasurement)
     suspend fun getSegments(measurementId: Int): List<StreamSegment>
+    fun getSegmentsFlow(measurementId: Int): Flow<List<StreamSegment>>
     suspend fun insertSegment(segment: StreamSegment): Long
     suspend fun updateSegment(segment: StreamSegment)
     suspend fun getVelocityPoints(segmentId: Int): List<VelocityPoint>

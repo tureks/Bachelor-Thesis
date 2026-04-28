@@ -10,6 +10,9 @@ import cz.cvut.fel.android_app.App
 import cz.cvut.fel.android_app.domain.*
 import cz.cvut.fel.android_app.domain.model.*
 import cz.cvut.fel.android_app.domain.repository.BleRepository
+import cz.cvut.fel.android_app.domain.repository.LocationRepository
+import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
@@ -29,92 +32,124 @@ data class StreamMeasurementUiState(
     val error: String? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class StreamMeasurementViewModel(
     private val startMeasurementUseCase: StartStreamMeasurementUseCase,
     private val captureSegmentUseCase: CaptureStreamSegmentUseCase,
     private val completeSegmentUseCase: CompleteStreamSegmentUseCase,
     private val completeMeasurementUseCase: CompleteStreamMeasurementUseCase,
-    private val cancelMeasurementUseCase: CancelStreamMeasurementUseCase,
+    private val updateSegmentUseCase: UpdateStreamSegmentUseCase,
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase,
-    private val observeBleStateUseCase: ObserveBleConnectionStateUseCase,
-    private val observeBatteryUseCase: ObserveBatteryLevelUseCase,
-    private val observeLocationUseCase: ObserveLocationUseCase,
-    private val bleRepository: BleRepository
+    private val bleRepository: BleRepository,
+    private val locationRepository: LocationRepository,
+    private val measurementRepository: StreamMeasurementRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(StreamMeasurementUiState())
-    val uiState: StateFlow<StreamMeasurementUiState> = _uiState.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    private val _captureState = MutableStateFlow(CaptureState())
+
+    private data class CaptureState(
+        val isCapturing: Boolean = false,
+        val progress: Float = 0f,
+        val points: List<CapturedVelocityPoint> = emptyList()
+    )
+
+    private data class MeasurementData(
+        val draft: StreamMeasurement?,
+        val segments: List<StreamSegment>,
+        val totals: StreamMeasurementTotals?
+    )
+
+    private data class HardwareState(
+        val velocity: Double,
+        val connectionState: BleConnectionState,
+        val batteryLevel: Int,
+        val currentLocation: Location?
+    )
+
+    private val measurementDataFlow: Flow<MeasurementData> = 
+        measurementRepository.getDraftFlow().flatMapLatest { draft ->
+            if (draft != null) {
+                measurementRepository.getSegmentsFlow(draft.id).map { segments ->
+                    val totals = getSummaryUseCase(draft.id)
+                    MeasurementData(draft, segments, totals)
+                }
+            } else {
+                flowOf(MeasurementData(null, emptyList(), null))
+            }
+        }
+
+    private val hardwareFlow: Flow<HardwareState> = combine(
+        bleRepository.velocityReadings,
+        bleRepository.connectionState,
+        bleRepository.batteryLevel,
+        locationRepository.observeLocation()
+    ) { velocity, connection, battery, location ->
+        HardwareState(velocity, connection, battery, location)
+    }
+
+    val uiState: StateFlow<StreamMeasurementUiState> = combine(
+        measurementDataFlow,
+        hardwareFlow,
+        _captureState,
+        _error
+    ) { data, hardware, capture, error ->
+        StreamMeasurementUiState(
+            measurement = data.draft,
+            segments = data.segments,
+            totals = data.totals,
+            currentVelocity = hardware.velocity,
+            connectionState = hardware.connectionState,
+            batteryLevel = hardware.batteryLevel,
+            currentLocation = hardware.currentLocation,
+            isCapturing = capture.isCapturing,
+            captureProgress = capture.progress,
+            capturedPoints = capture.points,
+            error = error
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StreamMeasurementUiState())
 
     private var captureJob: Job? = null
 
-    init {
-        // Observe Hardware & Location
-        observeBleStateUseCase().onEach { state ->
-            _uiState.update { it.copy(connectionState = state) }
-        }.launchIn(viewModelScope)
-
-        observeBatteryUseCase().onEach { level ->
-            _uiState.update { it.copy(batteryLevel = level) }
-        }.launchIn(viewModelScope)
-
-        observeLocationUseCase().onEach { location ->
-            _uiState.update { it.copy(currentLocation = location) }
-        }.launchIn(viewModelScope)
-
-        bleRepository.velocityReadings.onEach { velocity ->
-            _uiState.update { it.copy(currentVelocity = velocity) }
-        }.launchIn(viewModelScope)
-    }
-
-    /**
-     * Starts a new measurement draft.
-     */
     fun startNewMeasurement() {
         viewModelScope.launch {
-            val id = startMeasurementUseCase()
-            refreshData(id.toInt())
+            try {
+                startMeasurementUseCase()
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
         }
     }
 
-    /**
-     * Captures velocity over a 10s window. 
-     */
     fun startCapture() {
-        if (_uiState.value.isCapturing) return
-        
-        _uiState.update { it.copy(isCapturing = true, captureProgress = 0f, capturedPoints = emptyList()) }
+        if (_captureState.value.isCapturing) return
+        _captureState.update { it.copy(isCapturing = true, progress = 0f, points = emptyList()) }
         
         captureJob?.cancel()
         captureJob = viewModelScope.launch {
             val readings = mutableListOf<Double>()
-            
-            // Raw readings are needed to build CapturedVelocityPoints
             val rawCollector = bleRepository.velocityReadings.onEach { readings.add(it) }.launchIn(this)
 
             captureSegmentUseCase(bleRepository.velocityReadings).collect { stats ->
-                // Approximate progress (100 samples / 10s window)
                 val progress = readings.size / 100f 
-                _uiState.update { it.copy(captureProgress = progress.coerceAtMost(1f)) }
+                _captureState.update { it.copy(progress = progress.coerceAtMost(1f)) }
 
                 if (progress >= 1f) {
                     rawCollector.cancel()
                     val points = readings.map { CapturedVelocityPoint(it, null) }
-                    _uiState.update { it.copy(isCapturing = false, capturedPoints = points) }
-                    cancel() 
+                    _captureState.update { it.copy(isCapturing = false, points = points) }
+                    this.cancel() 
                 }
             }
         }
     }
 
-    /**
-     * Completes a segment and persists it.
-     */
     fun completeSegment(width: Double, depth: Double) {
-        val measurementId = _uiState.value.measurement?.id ?: return
-        val points = _uiState.value.capturedPoints
+        val measurementId = uiState.value.measurement?.id ?: return
+        val points = _captureState.value.points
         
         if (points.isEmpty()) {
-            _uiState.update { it.copy(error = "No velocity data captured.") }
+            _error.value = "No velocity data captured."
             return
         }
 
@@ -127,19 +162,28 @@ class StreamMeasurementViewModel(
                     points = points,
                     selectedIndices = points.indices.toSet()
                 )
-                refreshData(measurementId)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
 
-    /**
-     * Finalizes the entire measurement session.
-     */
+    fun updateSegmentDimensions(segment: StreamSegment, updatedPoints: List<VelocityPoint>) {
+        viewModelScope.launch {
+            try {
+                val result = updateSegmentUseCase(segment, updatedPoints)
+                if (result is ValidationResult.Error) {
+                    _error.value = result.message
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
     fun finalizeMeasurement(name: String, notes: String) {
-        val measurement = _uiState.value.measurement ?: return
-        val location = _uiState.value.currentLocation
+        val measurement = uiState.value.measurement ?: return
+        val location = uiState.value.currentLocation
         
         viewModelScope.launch {
             try {
@@ -151,31 +195,19 @@ class StreamMeasurementViewModel(
                     gpsLong = location?.longitude
                 )
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
 
-    /**
-     * Cancels and deletes the current draft.
-     */
     fun cancelMeasurement() {
         viewModelScope.launch {
-            cancelMeasurementUseCase()
-            _uiState.update { it.copy(measurement = null, segments = emptyList(), totals = null) }
+            measurementRepository.deleteDraft()
         }
     }
 
-    private suspend fun refreshData(measurementId: Int) {
-        val totals = getSummaryUseCase(measurementId)
-        _uiState.update { it.copy(
-            measurement = _uiState.value.measurement?.copy(id = measurementId),
-            totals = totals
-        ) }
-    }
-
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        _error.value = null
     }
 
     companion object {
@@ -183,7 +215,8 @@ class StreamMeasurementViewModel(
             initializer {
                 val app = this[APPLICATION_KEY] as App
                 val summaryUseCase = GetStreamMeasurementSummaryUseCase(app.measurementRepository, app.userRepository)
-                
+                val validator = ValidateSegmentInputUseCase()
+
                 StreamMeasurementViewModel(
                     startMeasurementUseCase = StartStreamMeasurementUseCase(app.measurementRepository),
                     captureSegmentUseCase = CaptureStreamSegmentUseCase(),
@@ -193,12 +226,11 @@ class StreamMeasurementViewModel(
                         CalculateStreamSegmentUseCase()
                     ),
                     completeMeasurementUseCase = CompleteStreamMeasurementUseCase(app.measurementRepository, summaryUseCase),
-                    cancelMeasurementUseCase = CancelStreamMeasurementUseCase(app.measurementRepository),
+                    updateSegmentUseCase = UpdateStreamSegmentUseCase(app.measurementRepository, app.userRepository, validator),
                     getSummaryUseCase = summaryUseCase,
-                    observeBleStateUseCase = ObserveBleConnectionStateUseCase(app.bleRepository),
-                    observeBatteryUseCase = ObserveBatteryLevelUseCase(app.bleRepository),
-                    observeLocationUseCase = ObserveLocationUseCase(app.locationRepository),
-                    bleRepository = app.bleRepository
+                    bleRepository = app.bleRepository,
+                    locationRepository = app.locationRepository,
+                    measurementRepository = app.measurementRepository
                 )
             }
         }

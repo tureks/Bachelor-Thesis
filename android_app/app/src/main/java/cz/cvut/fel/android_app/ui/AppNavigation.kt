@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import cz.cvut.fel.android_app.ui.screens.FinalizeMeasurementScreen
 import cz.cvut.fel.android_app.ui.screens.HistoryScreen
 import cz.cvut.fel.android_app.ui.screens.MainScreen
 import cz.cvut.fel.android_app.ui.screens.MeasurementScreen
@@ -32,7 +33,17 @@ fun AppNavigation(
         composable(Screen.Measurement.route) {
             MeasurementScreen(
                 viewModel = measurementViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToFinalize = { navController.navigate(Screen.FinalizeMeasurement.route) }
+            )
+        }
+        composable(Screen.FinalizeMeasurement.route) {
+            FinalizeMeasurementScreen(
+                viewModel = measurementViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onComplete = {
+                    navController.popBackStack(Screen.MainScreen.route, inclusive = false)
+                }
             )
         }
         composable(Screen.History.route) {

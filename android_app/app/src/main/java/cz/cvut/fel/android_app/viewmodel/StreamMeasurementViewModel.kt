@@ -18,6 +18,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+data class VelocityReading(val velocity: Double, val timestamp: Long)
+data class ManualVelocityPoint(val id: Long, val velocity: Double, val height: Double = 0.0)
+
 data class StreamMeasurementUiState(
     val measurement: StreamMeasurement? = null,
     val segments: List<StreamSegment> = emptyList(),
@@ -29,6 +32,10 @@ data class StreamMeasurementUiState(
     val currentLocation: Location? = null,
     val connectionState: BleConnectionState = BleConnectionState.Idle,
     val batteryLevel: Int = 0,
+    val timeWindow: Int = 10, // seconds
+    val windowAverage: Double = 0.0,
+    val recentReadings: List<VelocityReading> = emptyList(),
+    val manualPoints: List<ManualVelocityPoint> = emptyList(),
     val error: String? = null
 )
 
@@ -46,6 +53,8 @@ class StreamMeasurementViewModel(
 ) : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
+    private val _timeWindow = MutableStateFlow(10)
+    private val _manualPoints = MutableStateFlow<List<ManualVelocityPoint>>(emptyList())
     private val _captureState = MutableStateFlow(CaptureState())
 
     private data class CaptureState(
@@ -88,12 +97,31 @@ class StreamMeasurementViewModel(
         HardwareState(velocity, connection, battery, location)
     }
 
+    private val recentReadingsFlow: Flow<List<VelocityReading>> = bleRepository.velocityReadings
+        .scan(emptyList<VelocityReading>()) { accumulator, velocity ->
+            val now = System.currentTimeMillis()
+            val windowStart = now - (_timeWindow.value * 1000)
+            (accumulator + VelocityReading(velocity, now))
+                .filter { it.timestamp >= windowStart }
+        }
+
     val uiState: StateFlow<StreamMeasurementUiState> = combine(
         measurementDataFlow,
         hardwareFlow,
         _captureState,
+        recentReadingsFlow,
+        _timeWindow,
+        _manualPoints,
         _error
-    ) { data, hardware, capture, error ->
+    ) { args ->
+        val data = args[0] as MeasurementData
+        val hardware = args[1] as HardwareState
+        val capture = args[2] as CaptureState
+        val readings = args[3] as List<VelocityReading>
+        val window = args[4] as Int
+        val points = args[5] as List<ManualVelocityPoint>
+        val error = args[6] as String?
+
         StreamMeasurementUiState(
             measurement = data.draft,
             segments = data.segments,
@@ -105,9 +133,32 @@ class StreamMeasurementViewModel(
             isCapturing = capture.isCapturing,
             captureProgress = capture.progress,
             capturedPoints = capture.points,
+            timeWindow = window,
+            recentReadings = readings,
+            windowAverage = if (readings.isEmpty()) 0.0 else readings.map { it.velocity }.average(),
+            manualPoints = points,
             error = error
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StreamMeasurementUiState())
+
+    fun setTimeWindow(seconds: Int) {
+        _timeWindow.value = seconds
+    }
+
+    fun addManualPoint() {
+        val avg = uiState.value.windowAverage
+        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg) }
+    }
+
+    fun updateManualPointHeight(id: Long, height: Double) {
+        _manualPoints.update { list ->
+            list.map { if (it.id == id) it.copy(height = height) else it }
+        }
+    }
+
+    fun deleteManualPoint(id: Long) {
+        _manualPoints.update { it.filterNot { p -> p.id == id } }
+    }
 
     private var captureJob: Job? = null
 

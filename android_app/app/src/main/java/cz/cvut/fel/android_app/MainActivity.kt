@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.navigation.compose.rememberNavController
+import cz.cvut.fel.android_app.ui.AppNavigation
 import cz.cvut.fel.android_app.ui.theme.Android_appTheme
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
@@ -23,7 +25,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Android_appTheme {
-
+                val navController = rememberNavController()
+                AppNavigation(
+                    navController = navController,
+                    measurementViewModel = measurementViewModel,
+                    historyViewModel = historyViewModel
+                )
             }
         }
     }

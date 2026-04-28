@@ -24,7 +24,6 @@ class CompleteStreamMeasurementUseCase(
 
         val finalizedMeasurement = measurement.copy(
             name = name,
-            location = null, // Location field is deprecated in favor of name + GPS
             note = note,
             gpsLat = gpsLat,
             gpsLong = gpsLong,

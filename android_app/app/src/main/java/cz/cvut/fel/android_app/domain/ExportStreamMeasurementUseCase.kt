@@ -29,7 +29,6 @@ class ExportStreamMeasurementUseCase(
         sb.append("\"PROPERTY\",\"VALUE\"\n")
         sb.append("\"Report Type\",\"Stream Gauging Measurement\"\n")
         sb.append("\"Measurement Name\",\"${measurement.name}\"\n")
-        sb.append("\"Location\",\"${measurement.location ?: ""}\"\n")
         sb.append("\"Timestamp\",\"${dateFormat.format(Date(measurement.measureTimestamp))}\"\n")
         sb.append("\"GPS Latitude\",\"${measurement.gpsLat ?: ""}\"\n")
         sb.append("\"GPS Longitude\",\"${measurement.gpsLong ?: ""}\"\n")

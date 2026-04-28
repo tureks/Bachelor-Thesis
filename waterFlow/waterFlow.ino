@@ -2,8 +2,8 @@
 #include <Adafruit_TinyUSB.h>
 #include <nrf_wdt.h>
 
-#define SIGNAL_PIN D2
-#define BUTTON_PIN D1
+#define SIGNAL_PIN D8
+#define BUTTON_PIN D9
 #define LONG_PRESS_MS 1000
 #define NO_PULSE_TIMEOUT_MS 90
 #define K 0.02617f

@@ -9,25 +9,22 @@ class CompleteStreamMeasurementUseCase(
 ) {
     /**
      * Finalizes the entire stream measurement session.
-     * Takes user metadata, calculates final aggregates, and marks as COMPLETE.
+     * name: The primary identifier (e.g. Station Name, River, or Location).
      */
     suspend operator fun invoke(
         measurementId: Int,
         name: String,
-        location: String,
-        note: String,
-        gpsLat: Double?,
-        gpsLong: Double?
+        note: String? = null,
+        gpsLat: Double? = null,
+        gpsLong: Double? = null
     ) {
         val measurement = repository.getById(measurementId) ?: return
         
-        // Calculate the final river totals from all recorded segments
         val summary = getSummaryUseCase(measurementId)
 
-        // Create the finalized domain object
         val finalizedMeasurement = measurement.copy(
             name = name,
-            location = location, // User-editable string
+            location = null, // Location field is deprecated in favor of name + GPS
             note = note,
             gpsLat = gpsLat,
             gpsLong = gpsLong,
@@ -37,7 +34,6 @@ class CompleteStreamMeasurementUseCase(
             status = StreamMeasurementStatus.COMPLETE
         )
 
-        // Persist to database
         repository.update(finalizedMeasurement)
     }
 }

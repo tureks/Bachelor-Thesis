@@ -134,12 +134,23 @@ class LocalBleRepository(
             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
             _connectionState.value = BleConnectionState.Connected(gatt.device.address)
             
-            // Update last connected timestamp in DB
+            // Update last connected timestamp in DB or insert if new
             scope.launch {
                 val address = gatt.device.address
+                val name = gatt.device.name ?: "FlowMeter"
                 val knownDevices = deviceRepository.getAll().firstOrNull() ?: emptyList()
-                knownDevices.find { it.macAddress == address }?.let { device ->
-                    deviceRepository.updateLastConnected(device.id, System.currentTimeMillis())
+                val existingDevice = knownDevices.find { it.macAddress == address }
+                
+                if (existingDevice != null) {
+                    deviceRepository.updateLastConnected(existingDevice.id, System.currentTimeMillis())
+                } else {
+                    deviceRepository.insert(
+                        Device(
+                            name = name,
+                            macAddress = address,
+                            lastConnected = System.currentTimeMillis()
+                        )
+                    )
                 }
             }
         }

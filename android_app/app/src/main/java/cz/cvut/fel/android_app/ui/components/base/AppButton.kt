@@ -12,24 +12,14 @@ import androidx.compose.ui.unit.dp
 fun AppButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    isPrimary: Boolean = true
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    icon: ImageVector? = null
 ) {
-    if (isPrimary) {
-        Button(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth()
-        ) {
-            ButtonContent(text, icon)
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth()
-        ) {
-            ButtonContent(text, icon)
-        }
+    Button(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        ButtonContent(text, icon)
     }
 }
 

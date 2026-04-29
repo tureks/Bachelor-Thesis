@@ -14,8 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppButton
+import cz.cvut.fel.android_app.ui.components.base.AppOutlinedButton
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+
+private const val BATTERY_LOW_THRESHOLD = 20
 
 @Composable
 fun MainScreen(
@@ -38,7 +41,7 @@ fun MainScreen(
                         Text(
                             text = "Battery: ${uiState.batteryLevel}%",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (uiState.batteryLevel < 20) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            color = if (uiState.batteryLevel < BATTERY_LOW_THRESHOLD) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -73,20 +76,18 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            AppButton(
+            AppOutlinedButton(
                 text = "Measurement History",
                 icon = Icons.AutoMirrored.Filled.List,
-                onClick = onNavigateToHistory,
-                isPrimary = false
+                onClick = onNavigateToHistory
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AppButton(
+            AppOutlinedButton(
                 text = "Settings",
                 icon = Icons.Default.Settings,
-                onClick = onNavigateToSettings,
-                isPrimary = false
+                onClick = onNavigateToSettings
             )
         }
     }

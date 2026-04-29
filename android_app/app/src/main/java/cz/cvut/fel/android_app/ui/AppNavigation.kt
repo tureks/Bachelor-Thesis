@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import cz.cvut.fel.android_app.ui.screens.CompleteSegmentScreen
 import cz.cvut.fel.android_app.ui.screens.FinalizeMeasurementScreen
 import cz.cvut.fel.android_app.ui.screens.HistoryScreen
 import cz.cvut.fel.android_app.ui.screens.MainScreen
@@ -20,9 +21,9 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.MainScreen.route
+        startDestination = Screen.Main.route
     ) {
-        composable(Screen.MainScreen.route) {
+        composable(Screen.Main.route) {
             MainScreen(
                 viewModel = measurementViewModel,
                 onNavigateToMeasurement = { navController.navigate(Screen.Measurement.route) },
@@ -34,7 +35,14 @@ fun AppNavigation(
             MeasurementScreen(
                 viewModel = measurementViewModel,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToCompleteSegment = { navController.navigate(Screen.CompleteSegment.route) },
                 onNavigateToFinalize = { navController.navigate(Screen.FinalizeMeasurement.route) }
+            )
+        }
+        composable(Screen.CompleteSegment.route) {
+            CompleteSegmentScreen(
+                viewModel = measurementViewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(Screen.FinalizeMeasurement.route) {
@@ -42,7 +50,7 @@ fun AppNavigation(
                 viewModel = measurementViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onComplete = {
-                    navController.popBackStack(Screen.MainScreen.route, inclusive = false)
+                    navController.popBackStack(Screen.Main.route, inclusive = false)
                 }
             )
         }
@@ -50,14 +58,11 @@ fun AppNavigation(
             HistoryScreen(
                 viewModel = historyViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToMeasurement = { id -> 
-                    // Handle navigation to specific measurement if needed
-                }
+                onNavigateToMeasurement = {}
             )
         }
         composable(Screen.Settings.route) {
             SettingsScreen()
         }
-        // Add Device screen composable when ready
     }
 }

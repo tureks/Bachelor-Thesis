@@ -12,6 +12,7 @@ import cz.cvut.fel.android_app.domain.model.*
 import cz.cvut.fel.android_app.domain.repository.BleRepository
 import cz.cvut.fel.android_app.domain.repository.LocationRepository
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
+import cz.cvut.fel.android_app.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -36,6 +37,7 @@ data class StreamMeasurementUiState(
     val windowAverage: Double = 0.0,
     val recentReadings: List<VelocityReading> = emptyList(),
     val manualPoints: List<ManualVelocityPoint> = emptyList(),
+    val preferredUnit: MeasurementUnit = MeasurementUnit.HYDROMETRIC,
     val error: String? = null
 )
 
@@ -49,7 +51,8 @@ class StreamMeasurementViewModel(
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase,
     private val bleRepository: BleRepository,
     private val locationRepository: LocationRepository,
-    private val measurementRepository: StreamMeasurementRepository
+    private val measurementRepository: StreamMeasurementRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
@@ -97,6 +100,10 @@ class StreamMeasurementViewModel(
         HardwareState(velocity, connection, battery, location)
     }
 
+    private val userUnitFlow: Flow<MeasurementUnit> = userRepository.user
+        .map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }
+        .distinctUntilChanged()
+
     private val recentReadingsFlow: Flow<List<VelocityReading>> = bleRepository.velocityReadings
         .scan(emptyList<VelocityReading>()) { accumulator, velocity ->
             val now = System.currentTimeMillis()
@@ -112,6 +119,7 @@ class StreamMeasurementViewModel(
         recentReadingsFlow,
         _timeWindow,
         _manualPoints,
+        userUnitFlow,
         _error
     ) { args ->
         val data = args[0] as MeasurementData
@@ -120,7 +128,8 @@ class StreamMeasurementViewModel(
         val readings = args[3] as List<VelocityReading>
         val window = args[4] as Int
         val points = args[5] as List<ManualVelocityPoint>
-        val error = args[6] as String?
+        val unit = args[6] as MeasurementUnit
+        val error = args[7] as String?
 
         StreamMeasurementUiState(
             measurement = data.draft,
@@ -137,6 +146,7 @@ class StreamMeasurementViewModel(
             recentReadings = readings,
             windowAverage = if (readings.isEmpty()) 0.0 else readings.map { it.velocity }.average(),
             manualPoints = points,
+            preferredUnit = unit,
             error = error
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StreamMeasurementUiState())
@@ -195,12 +205,18 @@ class StreamMeasurementViewModel(
         }
     }
 
-    fun completeSegment(width: Double, depth: Double) {
+    fun completeSegment(width: Double, depth: Double, selectedPointIds: Set<Long>) {
         val measurementId = uiState.value.measurement?.id ?: return
-        val points = _captureState.value.points
+        val points = uiState.value.manualPoints
         
         if (points.isEmpty()) {
             _error.value = "No velocity data captured."
+            return
+        }
+
+        val filteredPoints = points.filter { selectedPointIds.contains(it.id) }
+        if (filteredPoints.isEmpty()) {
+            _error.value = "Please select at least one velocity point."
             return
         }
 
@@ -210,9 +226,11 @@ class StreamMeasurementViewModel(
                     measurementId = measurementId,
                     segmentWidth = width,
                     depth = depth,
-                    points = points,
-                    selectedIndices = points.indices.toSet()
+                    points = filteredPoints.map { CapturedVelocityPoint(it.velocity, it.height) },
+                    selectedIndices = filteredPoints.indices.toSet()
                 )
+                // Clear manual points for next segment
+                _manualPoints.value = emptyList()
             } catch (e: Exception) {
                 _error.value = e.message
             }
@@ -281,7 +299,8 @@ class StreamMeasurementViewModel(
                     getSummaryUseCase = summaryUseCase,
                     bleRepository = app.bleRepository,
                     locationRepository = app.locationRepository,
-                    measurementRepository = app.measurementRepository
+                    measurementRepository = app.measurementRepository,
+                    userRepository = app.userRepository
                 )
             }
         }

@@ -1,9 +1,11 @@
 package cz.cvut.fel.android_app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.*
@@ -22,24 +25,20 @@ import java.util.Locale
 fun MeasurementScreen(
     viewModel: StreamMeasurementViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToCompleteSegment: () -> Unit,
-    onNavigateToFinalize: () -> Unit
+    onNavigateToCompleteSegment: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showTimeWindowDialog by remember { mutableStateOf(false) }
-    val onCancel = { viewModel.cancelMeasurement(); onNavigateBack() }
+    var showCancelDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "Segment Capture",
-                onNavigateBack = onCancel,
+                onNavigateBack = onNavigateBack,
                 actions = {
-                    IconButton(onClick = onNavigateToFinalize) {
-                        Icon(Icons.Default.Check, contentDescription = "Finalize")
-                    }
-                    TextButton(onClick = onCancel) {
+                    TextButton(onClick = { showCancelDialog = true }) {
                         Text("Cancel", color = MaterialTheme.colorScheme.error)
                     }
                 }
@@ -60,94 +59,139 @@ fun MeasurementScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier
-                        .clickable { viewModel.addManualPoint() }
-                        .weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = String.format(Locale.US, "%.3f m/s", uiState.windowAverage),
-                        style = MaterialTheme.typography.displayMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Live Average",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                IconButton(onClick = { showTimeWindowDialog = true }) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Settings, contentDescription = "Time Window")
-                        Text("${uiState.timeWindow}s", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            VelocityGraph(
-                readings = uiState.recentReadings,
-                windowSeconds = uiState.timeWindow,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
-            )
+                    .clickable { viewModel.addManualPoint() },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = String.format(Locale.US, "%.2f m/s", uiState.windowAverage),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Live Average",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
+            OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                border = CardDefaults.outlinedCardBorder(enabled = true).copy(width = 0.5.dp)
             ) {
-                Text(
-                    text = "Manual Velocity Points",
-                    style = MaterialTheme.typography.titleMedium
+                VelocityGraph(
+                    readings = uiState.recentReadings,
+                    windowSeconds = uiState.timeWindow,
+                    onTap = { viewModel.addManualPoint() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(8.dp)
                 )
-                TextButton(onClick = { viewModel.addManualPoint() }) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Capture Current")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Velocity Points",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (uiState.manualPoints.isEmpty() && uiState.segments.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Tap the velocity reading or graph\nto capture a point",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(uiState.manualPoints, key = { it.id }) { point ->
+                        ManualPointItem(
+                            point = point,
+                            unit = uiState.preferredUnit,
+                            onClick = { selectedPoint = point }
+                        )
+                    }
+                    if (uiState.segments.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Completed Segments",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                        items(uiState.segments, key = { it.id }) { segment ->
+                            SegmentSummaryItem(segment = segment, unit = uiState.preferredUnit)
+                        }
+                    }
                 }
             }
 
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                    .padding(top = 16.dp)
             ) {
-                items(uiState.manualPoints, key = { it.id }) { point ->
-                    ManualPointItem(
-                        point = point,
-                        unit = uiState.preferredUnit,
-                        onClick = { selectedPoint = point }
-                    )
-                }
-
-                if (uiState.segments.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Completed Segments",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 8.dp)
+                Surface(
+                    onClick = { showTimeWindowDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 6.dp,
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier
+                        .size(56.dp)
+                        .align(Alignment.CenterStart)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Time Window Settings",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.outline
                         )
-                    }
-                    items(uiState.segments, key = { it.id }) { segment ->
-                        SegmentSummaryItem(segment = segment, unit = uiState.preferredUnit)
                     }
                 }
             }
         }
+    }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel Measurement") },
+            text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.cancelMeasurement()
+                    onNavigateBack()
+                }) { Text("Yes") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) { Text("No") }
+            }
+        )
     }
 
     if (showTimeWindowDialog) {

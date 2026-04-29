@@ -89,28 +89,29 @@ class StreamMeasurementViewModel(
             } else {
                 flowOf(MeasurementData(null, emptyList(), null))
             }
-        }
+        }.onStart { emit(MeasurementData(null, emptyList(), null)) }
 
     private val hardwareFlow: Flow<HardwareState> = combine(
-        bleRepository.velocityReadings,
+        bleRepository.velocityReadings.onStart { emit(0.0) },
         bleRepository.connectionState,
         bleRepository.batteryLevel,
-        locationRepository.observeLocation()
+        locationRepository.observeLocation().onStart { emit(null) }
     ) { velocity, connection, battery, location ->
         HardwareState(velocity, connection, battery, location)
     }
 
     private val userUnitFlow: Flow<MeasurementUnit> = userRepository.user
         .map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }
+        .onStart { emit(MeasurementUnit.HYDROMETRIC) }
         .distinctUntilChanged()
 
     private val recentReadingsFlow: Flow<List<VelocityReading>> = bleRepository.velocityReadings
         .scan(emptyList<VelocityReading>()) { accumulator, velocity ->
             val now = System.currentTimeMillis()
-            val windowStart = now - (_timeWindow.value * 1000)
-            (accumulator + VelocityReading(velocity, now))
-                .filter { it.timestamp >= windowStart }
+            val windowStart = now - (_timeWindow.value * 1000L)
+            (accumulator + VelocityReading(velocity, now)).filter { it.timestamp >= windowStart }
         }
+        .onStart { emit(emptyList()) }
 
     val uiState: StateFlow<StreamMeasurementUiState> = combine(
         measurementDataFlow,
@@ -144,7 +145,11 @@ class StreamMeasurementViewModel(
             capturedPoints = capture.points,
             timeWindow = window,
             recentReadings = readings,
-            windowAverage = if (readings.isEmpty()) 0.0 else readings.map { it.velocity }.average(),
+            windowAverage = run {
+                val windowStart = System.currentTimeMillis() - window * 1000L
+                val windowed = readings.filter { it.timestamp >= windowStart }
+                if (windowed.isEmpty()) 0.0 else windowed.map { it.velocity }.average()
+            },
             manualPoints = points,
             preferredUnit = unit,
             error = error

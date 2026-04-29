@@ -1,6 +1,7 @@
 package cz.cvut.fel.android_app.ui.components.domain
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,6 +12,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -21,6 +23,7 @@ import java.util.Locale
 fun VelocityGraph(
     readings: List<VelocityReading>,
     windowSeconds: Int,
+    onTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -29,66 +32,87 @@ fun VelocityGraph(
     val textMeasurer = rememberTextMeasurer()
     val textStyle = MaterialTheme.typography.labelSmall.copy(color = onSurfaceColor)
 
-    Canvas(modifier = modifier) {
-        val labelPadding = 48.dp.toPx()
-        val bottomPadding = 24.dp.toPx()
+    Canvas(
+        modifier = modifier.pointerInput(Unit) {
+            detectTapGestures { onTap() }
+        }
+    ) {
+        val leftPadding = 32.dp.toPx()
+        val rightPadding = 8.dp.toPx()
+        val topPadding = 8.dp.toPx()
+        val bottomPadding = 20.dp.toPx()
+        
+        val graphWidth = size.width - leftPadding - rightPadding
+        val graphHeight = size.height - bottomPadding - topPadding
 
-        val width = size.width - labelPadding
-        val height = size.height - bottomPadding
         val now = System.currentTimeMillis()
         val windowMillis = windowSeconds * 1000L
-        val startTime = now - windowMillis
 
+        val segmentStartTime = readings.firstOrNull()?.timestamp ?: now
+        val elapsedMs = (now - segmentStartTime).coerceAtLeast(1L)
+        val visibleWindowMs = minOf(elapsedMs, windowMillis).coerceAtLeast(1L)
+        val startTime = now - visibleWindowMs
+
+        // Background and axes
         drawRect(
             color = outlineColor.copy(alpha = 0.05f),
-            topLeft = Offset(labelPadding, 0f),
-            size = Size(width, height)
+            topLeft = Offset(leftPadding, topPadding),
+            size = Size(graphWidth, graphHeight)
         )
+        drawLine(color = outlineColor, start = Offset(leftPadding, topPadding), end = Offset(leftPadding, graphHeight + topPadding), strokeWidth = 0.5.dp.toPx())
+        drawLine(color = outlineColor, start = Offset(leftPadding, graphHeight + topPadding), end = Offset(size.width - rightPadding, graphHeight + topPadding), strokeWidth = 0.5.dp.toPx())
 
-        drawLine(color = outlineColor, start = Offset(labelPadding, 0f), end = Offset(labelPadding, height), strokeWidth = 1f)
-        drawLine(color = outlineColor, start = Offset(labelPadding, height), end = Offset(size.width, height), strokeWidth = 1f)
+        // Y auto-zoom from visible readings
+        val visibleReadings = readings.filter { it.timestamp >= startTime }
+        val maxV = (visibleReadings.maxOfOrNull { it.velocity } ?: 1.0).coerceAtLeast(0.1)
+        val minV = (visibleReadings.minOfOrNull { it.velocity } ?: 0.0).coerceAtLeast(0.0)
+        val yRange = (maxV - minV).coerceAtLeast(0.3)
+        val yPadding = yRange * 0.2
+        val yMax = maxV + yPadding
+        val yMin = (minV - yPadding).coerceAtLeast(0.0)
 
-        val maxVelocity = (readings.maxOfOrNull { it.velocity } ?: 1.0).coerceAtLeast(0.5)
-
-        val maxLayout = textMeasurer.measure(String.format(Locale.US, "%.1f", maxVelocity), style = textStyle)
-        drawText(maxLayout, topLeft = Offset(labelPadding - maxLayout.size.width - 8f, 0f))
+        // Y labels
+        val topLabel = textMeasurer.measure(String.format(Locale.US, "%.1f", yMax), style = textStyle)
+        drawText(topLabel, topLeft = Offset(leftPadding - topLabel.size.width - 6f, topPadding))
 
         val unitLayout = textMeasurer.measure("m/s", style = textStyle)
-        drawText(unitLayout, topLeft = Offset(labelPadding - unitLayout.size.width - 8f, height / 2 - unitLayout.size.height / 2))
+        drawText(unitLayout, topLeft = Offset(leftPadding - unitLayout.size.width - 6f, topPadding + graphHeight / 2 - unitLayout.size.height / 2))
 
-        val zeroLayout = textMeasurer.measure("0.0", style = textStyle)
-        drawText(zeroLayout, topLeft = Offset(labelPadding - zeroLayout.size.width - 8f, height - zeroLayout.size.height))
+        val bottomLabel = textMeasurer.measure(String.format(Locale.US, "%.1f", yMin), style = textStyle)
+        drawText(bottomLabel, topLeft = Offset(leftPadding - bottomLabel.size.width - 6f, topPadding + graphHeight - bottomLabel.size.height))
 
-        val startLayout = textMeasurer.measure("-${windowSeconds}s", style = textStyle)
-        drawText(startLayout, topLeft = Offset(labelPadding, height + 4.dp.toPx()))
+        // X labels — elapsed seconds from segment start
+        val leftElapsedSec = ((startTime - segmentStartTime) / 1000).toInt()
+        val rightElapsedSec = (elapsedMs / 1000).toInt()
 
-        val nowLayout = textMeasurer.measure("now", style = textStyle)
-        drawText(nowLayout, topLeft = Offset(size.width - nowLayout.size.width, height + 4.dp.toPx()))
+        val startLabel = textMeasurer.measure("${leftElapsedSec}s", style = textStyle)
+        drawText(startLabel, topLeft = Offset(leftPadding, topPadding + graphHeight + 4.dp.toPx()))
 
-        if (readings.size < 2) return@Canvas
+        val endLabel = textMeasurer.measure("${rightElapsedSec}s", style = textStyle)
+        drawText(endLabel, topLeft = Offset(size.width - rightPadding - endLabel.size.width, topPadding + graphHeight + 4.dp.toPx()))
 
-        clipRect(left = labelPadding, top = 0f, right = size.width, bottom = height) {
+        if (visibleReadings.size < 2) return@Canvas
+
+        clipRect(left = leftPadding, top = topPadding, right = size.width - rightPadding, bottom = graphHeight + topPadding) {
             val path = Path()
-            val points = readings.map { reading ->
+            val points = visibleReadings.map { reading ->
                 Offset(
-                    x = labelPadding + ((reading.timestamp - startTime).toFloat() / windowMillis) * width,
-                    y = height - (reading.velocity.toFloat() / maxVelocity.toFloat() * height)
+                    x = leftPadding + (reading.timestamp - startTime).toFloat() / visibleWindowMs.toFloat() * graphWidth,
+                    y = topPadding + graphHeight - ((reading.velocity.toFloat() - yMin.toFloat()) / (yMax - yMin).toFloat() * graphHeight)
                 )
             }
-
             path.moveTo(points[0].x, points[0].y)
             for (i in 1 until points.size) {
                 val p0 = points[i - 1]
                 val p1 = points[i]
-                val controlPointX = (p0.x + p1.x) / 2
-                path.quadraticTo(p0.x, p0.y, controlPointX, (p0.y + p1.y) / 2)
+                val controlX = (p0.x + p1.x) / 2
+                path.quadraticTo(p0.x, p0.y, controlX, (p0.y + p1.y) / 2)
             }
             path.lineTo(points.last().x, points.last().y)
-
             drawPath(
                 path = path,
                 color = primaryColor,
-                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
         }
     }

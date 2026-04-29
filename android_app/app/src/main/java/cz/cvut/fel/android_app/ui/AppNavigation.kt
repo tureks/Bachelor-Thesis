@@ -35,8 +35,7 @@ fun AppNavigation(
             MeasurementScreen(
                 viewModel = measurementViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToCompleteSegment = { navController.navigate(Screen.CompleteSegment.route) },
-                onNavigateToFinalize = { navController.navigate(Screen.FinalizeMeasurement.route) }
+                onNavigateToCompleteSegment = { navController.navigate(Screen.CompleteSegment.route) }
             )
         }
         composable(Screen.CompleteSegment.route) {

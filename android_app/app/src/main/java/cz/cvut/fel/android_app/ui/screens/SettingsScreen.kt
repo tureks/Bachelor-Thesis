@@ -9,11 +9,12 @@ import androidx.compose.ui.Modifier
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Settings"
+                title = "Settings",
+                onNavigateBack = onNavigateBack
             )
         }
     ) { padding ->

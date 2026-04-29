@@ -1,13 +1,14 @@
 package cz.cvut.fel.android_app.ui.components.domain
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
@@ -22,6 +23,12 @@ fun SegmentPointItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val depthLabel = if (unit == MeasurementUnit.HYDROMETRIC) {
+        String.format(Locale.US, "%.1f cm", point.height * 100)
+    } else {
+        String.format(Locale.US, "%.2f m", point.height)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -30,29 +37,40 @@ fun SegmentPointItem(
         )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
 
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onEdit() }
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
-                    text = String.format(Locale.US, "%.3f m/s", point.velocity),
-                    style = MaterialTheme.typography.bodyLarge
+                    text = String.format(Locale.US, "%.2f m/s", point.velocity),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
                 )
-                val depthLabel = if (unit == MeasurementUnit.HYDROMETRIC) {
-                    String.format(Locale.US, "Depth: %.1f cm", point.height * 100)
-                } else {
-                    String.format(Locale.US, "Depth: %.2f m", point.height)
-                }
-                Text(text = depthLabel, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = depthLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit")
-            }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

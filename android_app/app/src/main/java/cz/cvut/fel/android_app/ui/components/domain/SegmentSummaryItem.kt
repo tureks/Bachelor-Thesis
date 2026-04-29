@@ -1,5 +1,7 @@
 package cz.cvut.fel.android_app.ui.components.domain
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,7 +15,8 @@ import java.util.Locale
 fun SegmentSummaryItem(
     segment: StreamSegment,
     unit: MeasurementUnit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
 
@@ -30,16 +33,19 @@ fun SegmentSummaryItem(
     }
 
     val flowLabel = if (isHydrometric) {
-        String.format(Locale.US, "%.2f L/s", segment.segmentFlow * 1000)
+        String.format(Locale.US, "%.2f l/s", segment.segmentFlow * 1000)
     } else {
-        String.format(Locale.US, "%.4f m³/s", segment.segmentFlow)
+        String.format(Locale.US, "%.3f m³/s", segment.segmentFlow)
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        ),
+        border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -59,7 +65,7 @@ fun SegmentSummaryItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = String.format(Locale.US, "%.3f m/s  →  $flowLabel", segment.averageVelocity),
+                    text = String.format(Locale.US, "%.2f m/s  →  $flowLabel", segment.averageVelocity),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

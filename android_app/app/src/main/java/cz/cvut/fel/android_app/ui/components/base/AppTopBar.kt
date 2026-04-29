@@ -13,10 +13,17 @@ fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
     onNavigateBack: (() -> Unit)? = null,
+    titleContent: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = {
+            if (titleContent != null) {
+                titleContent()
+            } else {
+                Text(title)
+            }
+        },
         modifier = modifier,
         navigationIcon = {
             if (onNavigateBack != null) {

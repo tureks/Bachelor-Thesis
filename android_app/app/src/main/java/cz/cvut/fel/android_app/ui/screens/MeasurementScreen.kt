@@ -32,10 +32,32 @@ fun MeasurementScreen(
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
 
+    val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "Segment Capture",
+                titleContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Segment Capture")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(100.dp),
+                            color = androidx.compose.ui.graphics.Color.Transparent,
+                            border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = segmentNumber.toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    }
+                },
                 onNavigateBack = onNavigateBack,
                 actions = {
                     TextButton(onClick = { showCancelDialog = true }) {
@@ -102,7 +124,7 @@ fun MeasurementScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (uiState.manualPoints.isEmpty() && uiState.segments.isEmpty()) {
+            if (uiState.manualPoints.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -130,18 +152,6 @@ fun MeasurementScreen(
                             unit = uiState.preferredUnit,
                             onClick = { selectedPoint = point }
                         )
-                    }
-                    if (uiState.segments.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Completed Segments",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                        items(uiState.segments, key = { it.id }) { segment ->
-                            SegmentSummaryItem(segment = segment, unit = uiState.preferredUnit)
-                        }
                     }
                 }
             }

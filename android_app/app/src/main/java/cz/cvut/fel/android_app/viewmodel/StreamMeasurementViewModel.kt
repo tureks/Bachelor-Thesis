@@ -14,6 +14,7 @@ import cz.cvut.fel.android_app.domain.repository.LocationRepository
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
@@ -36,8 +37,10 @@ data class StreamMeasurementUiState(
     val currentLocation: Location? = null,
     val connectionState: BleConnectionState = BleConnectionState.Idle,
     val batteryLevel: Int = 0,
-    val timeWindow: Int = 10, // seconds
+    val timeWindow: Int = 10,
     val windowAverage: Double = 0.0,
+    val windowMin: Double? = null,
+    val windowMax: Double? = null,
     val recentReadings: List<VelocityReading> = emptyList(),
     val manualPoints: List<ManualVelocityPoint> = emptyList(),
     val currentWidth: String = "",
@@ -124,6 +127,17 @@ class StreamMeasurementViewModel(
         }
         .onStart { emit(emptyList()) }
 
+    @OptIn(FlowPreview::class)
+    private val windowAverageFlow: Flow<Double> = combine(recentReadingsFlow, _timeWindow) { readings, window ->
+        val now = System.currentTimeMillis()
+        val windowStart = now - window * 1000L
+        val windowed = readings.filter { it.timestamp >= windowStart && it.velocity > 0.0 }
+        if (windowed.isEmpty()) 0.0 else windowed.map { it.velocity }.average()
+    }
+    .sample(1200L)
+    .distinctUntilChanged()
+    .onStart { emit(0.0) }
+
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<StreamMeasurementUiState> = combine(
         measurementDataFlow,
@@ -137,7 +151,8 @@ class StreamMeasurementViewModel(
         _editingSegment,
         _editingPoints,
         userUnitFlow,
-        _error
+        _error,
+        windowAverageFlow
     ) { args ->
         val data = args[0] as MeasurementData
         val hardware = args[1] as HardwareState
@@ -151,6 +166,11 @@ class StreamMeasurementViewModel(
         val editingPoints = args[9] as List<VelocityPoint>
         val unit = args[10] as MeasurementUnit
         val error = args[11] as String?
+        val windowAvg = args[12] as Double
+
+        val windowStart = System.currentTimeMillis() - window * 1000L
+        val liveReadings = readings.filter { it.timestamp >= windowStart }
+        val validReadings = liveReadings.filter { it.velocity > 0.0 }
 
         StreamMeasurementUiState(
             measurement = data.draft,
@@ -165,11 +185,9 @@ class StreamMeasurementViewModel(
             capturedPoints = capture.points,
             timeWindow = window,
             recentReadings = readings,
-            windowAverage = run {
-                val windowStart = System.currentTimeMillis() - window * 1000L
-                val windowed = readings.filter { it.timestamp >= windowStart }
-                if (windowed.isEmpty()) 0.0 else windowed.map { it.velocity }.average()
-            },
+            windowAverage = windowAvg,
+            windowMin = validReadings.minOfOrNull { it.velocity } ?: 0.0,
+            windowMax = validReadings.maxOfOrNull { it.velocity } ?: 0.0,
             manualPoints = points,
             currentWidth = currentWidth,
             currentDepth = currentDepth,
@@ -216,7 +234,7 @@ class StreamMeasurementViewModel(
 
     fun addManualPoint() {
         val avg = uiState.value.windowAverage
-        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg) }
+        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = 60.0) }
     }
 
     fun updateManualPointHeight(id: Long, height: Double) {
@@ -231,17 +249,53 @@ class StreamMeasurementViewModel(
 
     private var captureJob: Job? = null
 
+    fun loadMeasurementForEditing(measurementId: Int) {
+        viewModelScope.launch {
+            try {
+                // Clear current live session state before loading
+                _manualPoints.value = emptyList()
+                _currentWidth.value = ""
+                _currentDepth.value = ""
+                _editingSegment.value = null
+
+                measurementRepository.setAsDraft(measurementId)
+                
+                // If it doesn't have GPS, try to get it now "at once"
+                val draft = measurementRepository.getDraft()
+                if (draft != null && draft.gpsLat == null) {
+                    val location = locationRepository.getCurrentLocation()
+                    if (location != null) {
+                        measurementRepository.update(draft.copy(
+                            gpsLat = location.latitude,
+                            gpsLong = location.longitude
+                        ))
+                    }
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load measurement: ${e.message}"
+            }
+        }
+    }
+
     fun startNewMeasurement() {
         viewModelScope.launch {
             try {
+                val location = locationRepository.getCurrentLocation()
                 startMeasurementUseCase()
-                // Simulation data for testing
-                _currentWidth.value = "100"
-                _currentDepth.value = "50"
-                _manualPoints.value = listOf(
-                    ManualVelocityPoint(System.currentTimeMillis(), 0.45, 0.6),
-                    ManualVelocityPoint(System.currentTimeMillis() + 1, 0.48, 0.2)
-                )
+                
+                // Update the newly created draft with location if available
+                measurementRepository.getDraft()?.let { draft ->
+                    if (location != null) {
+                        measurementRepository.update(draft.copy(
+                            gpsLat = location.latitude,
+                            gpsLong = location.longitude
+                        ))
+                    }
+                }
+
+                _currentWidth.value = ""
+                _currentDepth.value = ""
+                _manualPoints.value = emptyList()
             } catch (e: Exception) {
                 _error.value = e.message
             }
@@ -263,8 +317,9 @@ class StreamMeasurementViewModel(
 
                 if (progress >= 1f) {
                     rawCollector.cancel()
-                    val points = readings.map { CapturedVelocityPoint(it, null) }
-                    _captureState.update { it.copy(isCapturing = false, points = points) }
+                    _captureState.update { it.copy(isCapturing = false, points = emptyList()) }
+                    val avg = readings.average()
+                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = 60.0) }
                     this.cancel() 
                 }
             }
@@ -331,16 +386,16 @@ class StreamMeasurementViewModel(
 
     fun finalizeMeasurement(name: String, notes: String) {
         val measurement = uiState.value.measurement ?: return
-        val location = uiState.value.currentLocation
         
         viewModelScope.launch {
             try {
+                val location = locationRepository.getCurrentLocation()
                 completeMeasurementUseCase(
                     measurementId = measurement.id,
                     name = name,
                     note = notes,
-                    gpsLat = location?.latitude,
-                    gpsLong = location?.longitude
+                    gpsLat = location?.latitude ?: measurement.gpsLat,
+                    gpsLong = location?.longitude ?: measurement.gpsLong
                 )
             } catch (e: Exception) {
                 _error.value = e.message
@@ -378,7 +433,12 @@ class StreamMeasurementViewModel(
                         CalculateStreamSegmentUseCase()
                     ),
                     completeMeasurementUseCase = CompleteStreamMeasurementUseCase(app.measurementRepository, summaryUseCase),
-                    updateSegmentUseCase = UpdateStreamSegmentUseCase(app.measurementRepository, app.userRepository, validator),
+                    updateSegmentUseCase = UpdateStreamSegmentUseCase(
+                        app.measurementRepository,
+                        app.userRepository,
+                        validator,
+                        summaryUseCase
+                    ),
                     getSummaryUseCase = summaryUseCase,
                     bleRepository = app.bleRepository,
                     locationRepository = app.locationRepository,

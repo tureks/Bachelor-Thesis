@@ -35,4 +35,9 @@ interface StreamMeasurementDao {
 
     @Delete
     suspend fun delete(measurement: StreamMeasurementEntity)
+    @Query("UPDATE stream_measurement SET status = 'DRAFT' WHERE id = :id")
+    suspend fun setAsDraft(id: Int)
+
+    @Query("UPDATE stream_measurement SET status = 'COMPLETE' WHERE id != :id AND status = 'DRAFT'")
+    suspend fun markOtherDraftsAsComplete(id: Int)
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.window.DialogProperties
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
+import java.util.Locale
 
 @Composable
 fun EditSegmentDialog(
@@ -42,6 +43,7 @@ fun EditSegmentDialog(
     }
 
     var localPoints by remember { mutableStateOf(points) }
+    var pointToDelete by remember { mutableStateOf<VelocityPoint?>(null) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -109,7 +111,7 @@ fun EditSegmentDialog(
                                 localPoints = localPoints.map { if (it.id == updatedPoint.id) updatedPoint else it }
                             },
                             onDelete = {
-                                localPoints = localPoints.filter { it.id != point.id }
+                                pointToDelete = point
                             }
                         )
                     }
@@ -128,12 +130,10 @@ fun EditSegmentDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val wRaw = widthInput.toDoubleOrNull()
+                            val w = widthInput.toDoubleOrNull()
                                 ?: if (isHydrometric) segment.segmentWidth * 100.0 else segment.segmentWidth
-                            val dRaw = depthInput.toDoubleOrNull()
+                            val d = depthInput.toDoubleOrNull()
                                 ?: if (isHydrometric) segment.depth * 100.0 else segment.depth
-                            val w = if (isHydrometric) wRaw / 100.0 else wRaw
-                            val d = if (isHydrometric) dRaw / 100.0 else dRaw
                             onSave(segment.copy(segmentWidth = w, depth = d), localPoints)
                         }
                     ) {
@@ -142,6 +142,18 @@ fun EditSegmentDialog(
                 }
             }
         }
+    }
+
+    pointToDelete?.let { point ->
+        DeleteConfirmationDialog(
+            onDismiss = { pointToDelete = null },
+            onConfirm = {
+                localPoints = localPoints.filter { it.id != point.id }
+                pointToDelete = null
+            },
+            title = "Delete Point",
+            message = "Are you sure you want to delete this velocity point?"
+        )
     }
 }
 
@@ -157,8 +169,7 @@ private fun PointEditRow(
     var velocityInput by remember { mutableStateOf(point.velocity.toString()) }
     var heightInput by remember {
         mutableStateOf(
-            if (isHydrometric) ((point.measureHeight ?: 0.0) * 100.0).toString()
-            else (point.measureHeight ?: 0.0).toString()
+            String.format(Locale.US, "%.2f", (point.measureHeight ?: 0.0) / 100.0)
         )
     }
 
@@ -189,11 +200,10 @@ private fun PointEditRow(
                 onValueChange = {
                     heightInput = it
                     it.toDoubleOrNull()?.let { h ->
-                        val meters = if (isHydrometric) h / 100.0 else h
-                        onUpdate(point.copy(measureHeight = meters))
+                        onUpdate(point.copy(measureHeight = h * 100.0))
                     }
                 },
-                label = { Text(if (isHydrometric) "h (cm)" else "h (m)") },
+                label = { Text("h (%)") },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)

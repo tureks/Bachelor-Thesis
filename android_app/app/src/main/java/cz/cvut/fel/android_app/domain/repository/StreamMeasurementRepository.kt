@@ -22,4 +22,5 @@ interface StreamMeasurementRepository {
     suspend fun getVelocityPoints(segmentId: Int): List<VelocityPoint>
     suspend fun insertVelocityPoint(point: VelocityPoint): Long
     suspend fun deleteVelocityPoints(segmentId: Int)
+    suspend fun setAsDraft(measurementId: Int)
 }

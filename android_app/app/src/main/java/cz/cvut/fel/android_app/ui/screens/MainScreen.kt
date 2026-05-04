@@ -1,64 +1,65 @@
 package cz.cvut.fel.android_app.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppButton
 import cz.cvut.fel.android_app.ui.components.base.AppOutlinedButton
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
-import kotlinx.coroutines.delay
 
 private const val BATTERY_LOW_THRESHOLD = 20
-private const val HINT_TIMEOUT_MS = 5_000L
 
 @Composable
 fun MainScreen(
     viewModel: StreamMeasurementViewModel,
     onNavigateToMeasurement: () -> Unit,
+    onNavigateToDevice: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isConnected = true // TODO: restore to `uiState.connectionState is BleConnectionState.Connected`
-    var showConnectionHint by remember { mutableStateOf(false) }
+    val isConnected = uiState.connectionState is BleConnectionState.Connected
     var showOverwriteDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(showConnectionHint) {
-        if (showConnectionHint) {
-            delay(HINT_TIMEOUT_MS)
-            showConnectionHint = false
-        }
-    }
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = { focusManager.clearFocus() })
+        },
         topBar = {
             AppTopBar(
                 title = "Stream Measurement",
                 actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 16.dp)
+                    TextButton(
+                        onClick = onNavigateToDevice,
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
+                        Icon(
+                            imageVector = if (isConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isConnected) "Battery: ${uiState.batteryLevel}%" else "Not Connected",
+                            text = if (isConnected) "Battery: ${uiState.batteryLevel}%" else "Connect",
                             style = MaterialTheme.typography.bodyMedium,
                             color = when {
-                                !isConnected -> MaterialTheme.colorScheme.onSurfaceVariant
+                                !isConnected -> MaterialTheme.colorScheme.primary
                                 uiState.batteryLevel < BATTERY_LOW_THRESHOLD -> MaterialTheme.colorScheme.error
                                 else -> MaterialTheme.colorScheme.onSurface
                             }
@@ -83,11 +84,9 @@ fun MainScreen(
                 AppButton(
                     text = "New Measurement",
                     icon = Icons.Default.Add,
-                    enabled = true, // TODO: restore to `enabled = isConnected` after device testing
+                    enabled = isConnected,
                     onClick = {
-                        if (!isConnected) {
-                            showConnectionHint = true
-                        } else if (uiState.measurement != null) {
+                        if (uiState.measurement != null) {
                             showOverwriteDialog = true
                         } else {
                             viewModel.startNewMeasurement()
@@ -101,26 +100,26 @@ fun MainScreen(
                     AppButton(
                         text = "Continue Measurement",
                         icon = Icons.Default.PlayArrow,
-                        enabled = true, // TODO: restore to `enabled = isConnected` after device testing
-                        onClick = {
-                            if (!isConnected) {
-                                showConnectionHint = true
-                            } else {
-                                onNavigateToMeasurement()
-                            }
-                        }
+                        enabled = isConnected,
+                        onClick = { onNavigateToMeasurement() }
                     )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                if (!isConnected) {
+                    AppOutlinedButton(
+                        text = "Connect Device",
+                        icon = Icons.Default.Bluetooth,
+                        onClick = onNavigateToDevice
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 AppOutlinedButton(
                     text = "Measurement History",
                     icon = Icons.AutoMirrored.Filled.List,
-                    onClick = {
-                        showConnectionHint = false
-                        onNavigateToHistory()
-                    }
+                    onClick = onNavigateToHistory
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -128,36 +127,10 @@ fun MainScreen(
                 AppOutlinedButton(
                     text = "Settings",
                     icon = Icons.Default.Settings,
-                    onClick = {
-                        showConnectionHint = false
-                        onNavigateToSettings()
-                    }
+                    onClick = onNavigateToSettings
                 )
             }
 
-            AnimatedVisibility(
-                visible = showConnectionHint,
-                enter = slideInVertically { -it } + fadeIn(),
-                exit = slideOutVertically { -it } + fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { showConnectionHint = false },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Text(
-                        text = "Connect to a measuring device to start the measurement",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
         }
     }
 

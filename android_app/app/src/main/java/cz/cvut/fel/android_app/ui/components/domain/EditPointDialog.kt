@@ -24,10 +24,9 @@ fun EditPointDialog(
     onUpdateHeight: (Double) -> Unit,
     onDelete: () -> Unit
 ) {
-    val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
-    val initialDepth = if (isHydrometric) point.height * 100.0 else point.height
+    val initialHeight = point.height
     var heightInput by remember {
-        mutableStateOf(String.format(Locale.US, "%.1f", initialDepth))
+        mutableStateOf(String.format(Locale.US, "%.2f", initialHeight / 100.0))
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -75,7 +74,8 @@ fun EditPointDialog(
                 OutlinedTextField(
                     value = heightInput,
                     onValueChange = { heightInput = it },
-                    label = { Text(if (isHydrometric) "Measurement depth (cm)" else "Measurement depth (m)") },
+                    label = { Text("Measurement Depth") },
+                    placeholder = { Text("e.g. 0.6") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -87,8 +87,27 @@ fun EditPointDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+                    if (showDeleteConfirmation) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteConfirmation = false },
+                            title = { Text("Delete Point") },
+                            text = { Text("Are you sure you want to delete this velocity point?") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = onDelete,
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) { Text("Delete") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDeleteConfirmation = false }) { Text("Cancel") }
+                            }
+                        )
+                    }
+
                     TextButton(
-                        onClick = onDelete,
+                        onClick = { showDeleteConfirmation = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -103,8 +122,7 @@ fun EditPointDialog(
                     Button(
                         onClick = {
                             heightInput.toDoubleOrNull()?.let {
-                                val finalHeight = if (isHydrometric) it / 100.0 else it
-                                onUpdateHeight(finalHeight)
+                                onUpdateHeight(it * 100.0)
                             }
                         }
                     ) {

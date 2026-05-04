@@ -1,17 +1,24 @@
 package cz.cvut.fel.android_app.ui.screens
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
@@ -19,6 +26,7 @@ import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import java.util.Locale
 
 private val DecimalKeyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal)
 
@@ -40,6 +48,7 @@ fun CompleteSegmentScreen(
 
     var editingPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showCancelDialog by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     val width = uiState.currentWidth
     val depth = uiState.currentDepth
@@ -68,6 +77,9 @@ fun CompleteSegmentScreen(
     }
 
     Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = { focusManager.clearFocus() })
+        },
         topBar = {
             AppTopBar(
                 title = "Segment",
@@ -85,24 +97,6 @@ fun CompleteSegmentScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    if (isValid) {
-                        val wRaw = width.toDoubleOrNull() ?: 0.0
-                        val dRaw = depth.toDoubleOrNull() ?: 0.0
-                        val w = if (isHydrometric) wRaw / 100.0 else wRaw
-                        val d = if (isHydrometric) dRaw / 100.0 else dRaw
-                        viewModel.completeSegment(w, d, selectedPointIds)
-                        onNavigateToMeasurement()
-                    }
-                },
-                icon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
-                text = { Text("Next Segment") },
-                containerColor = if (isValid) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isValid) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-            )
         }
     ) { paddingValues ->
         Column(
@@ -117,7 +111,7 @@ fun CompleteSegmentScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = String.format(java.util.Locale.US, "%.2f %s", calculatedFlow, if (isHydrometric) "l/s" else "m³/s"),
+                    text = String.format(Locale.US, "%.2f %s", calculatedFlow, if (isHydrometric) "l/s" else "m³/s"),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -128,7 +122,7 @@ fun CompleteSegmentScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Segment Dimensions",
@@ -164,7 +158,7 @@ fun CompleteSegmentScreen(
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
             ) {
                 items(uiState.manualPoints, key = { it.id }) { point ->
                     SegmentPointItem(
@@ -183,21 +177,69 @@ fun CompleteSegmentScreen(
                 }
             }
 
-            OutlinedButton(
-                onClick = {
-                    val wRaw = width.toDoubleOrNull() ?: 0.0
-                    val dRaw = depth.toDoubleOrNull() ?: 0.0
-                    val w = if (isHydrometric) wRaw / 100.0 else wRaw
-                    val d = if (isHydrometric) dRaw / 100.0 else dRaw
-                    viewModel.completeSegment(w, d, selectedPointIds)
-                    onNavigateToFinalize()
-                },
-                enabled = isValid,
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
                 modifier = Modifier
-                    .padding(top = 16.dp)
-                    .align(Alignment.Start)
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Complete Measurement")
+                Button(
+                    onClick = {
+                        viewModel.completeSegment(
+                            width.toDoubleOrNull() ?: 0.0,
+                            depth.toDoubleOrNull() ?: 0.0,
+                            selectedPointIds
+                        )
+                        onNavigateToFinalize()
+                    },
+                    enabled = isValid,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Complete\nMeasurement",
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        if (isValid) {
+                            viewModel.completeSegment(
+                                width.toDoubleOrNull() ?: 0.0,
+                                depth.toDoubleOrNull() ?: 0.0,
+                                selectedPointIds
+                            )
+                            onNavigateToMeasurement()
+                        }
+                    },
+                    enabled = isValid,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Next\nSegment",
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 16.sp
+                    )
+                }
             }
         }
     }

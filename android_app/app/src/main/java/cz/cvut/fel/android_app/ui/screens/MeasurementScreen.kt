@@ -11,6 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
@@ -30,10 +33,14 @@ fun MeasurementScreen(
     var selectedPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
 
     Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = { focusManager.clearFocus() })
+        },
         topBar = {
             AppTopBar(
                 title = "Segment Capture",
@@ -60,10 +67,6 @@ fun MeasurementScreen(
             )
         }
     ) { paddingValues ->
-        val pointVelocities = uiState.manualPoints.map { it.velocity }
-        val minVelocity = pointVelocities.minOrNull()
-        val maxVelocity = pointVelocities.maxOrNull()
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -87,36 +90,35 @@ fun MeasurementScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
-                if (minVelocity != null && maxVelocity != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = String.format(Locale.US, "%.2f m/s", minVelocity),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Min",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = String.format(Locale.US, "%.2f m/s", maxVelocity),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Max",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = String.format(Locale.US, "%.2f m/s", uiState.windowMin ?: 0.0),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Min",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = String.format(Locale.US, "%.2f m/s", uiState.windowMax ?: 0.0),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Max",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
                 }
             }
@@ -172,7 +174,7 @@ fun MeasurementScreen(
                         ManualPointItem(
                             point = point,
                             unit = uiState.preferredUnit,
-                            onClick = { selectedPoint = point }
+                            onEdit = { selectedPoint = point }
                         )
                     }
                 }

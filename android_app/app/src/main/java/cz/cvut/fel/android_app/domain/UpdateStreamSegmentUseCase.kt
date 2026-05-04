@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.first
 class UpdateStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
     private val userRepository: UserRepository,
-    private val validator: ValidateSegmentInputUseCase
+    private val validator: ValidateSegmentInputUseCase,
+    private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase
 ) {
     /**
      * Updates an existing segment and its points.
@@ -55,12 +56,17 @@ class UpdateStreamSegmentUseCase(
         
         repository.deleteVelocityPoints(segment.id)
         updatedPoints.forEach { point ->
-            val heightMetric = point.measureHeight?.let { 
-                if (isHydrometric) it / 100.0 else it 
-            }
-            repository.insertVelocityPoint(point.copy(
-                segmentId = segment.id,
-                measureHeight = heightMetric
+            repository.insertVelocityPoint(point.copy(segmentId = segment.id))
+        }
+
+        // Update the parent measurement summary
+        val measurement = repository.getById(segment.measurementId)
+        if (measurement != null) {
+            val summary = getSummaryUseCase(segment.measurementId)
+            repository.update(measurement.copy(
+                totalWidth = summary.totalWidth,
+                maxDepth = summary.maxDepth,
+                totalFlow = summary.totalFlow
             ))
         }
 

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 data class HistoryUiState(
     val measurements: List<StreamMeasurement> = emptyList(),
     val searchQuery: String = "",
+    val selectedIds: Set<Int> = emptySet(),
     val isExporting: Boolean = false,
     val exportContent: String? = null,
     val error: String? = null
@@ -31,6 +32,7 @@ class HistoryViewModel(
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
+    private val _selectedIds = MutableStateFlow<Set<Int>>(emptySet())
     private val _isExporting = MutableStateFlow(false)
     private val _exportContent = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
@@ -38,16 +40,18 @@ class HistoryViewModel(
     val uiState: StateFlow<HistoryUiState> = combine(
         _searchQuery.flatMapLatest { query -> searchMeasurementsUseCase(query) },
         _searchQuery,
+        _selectedIds,
         _isExporting,
         _exportContent,
         _error
-    ) { measurements, query, exporting, content, error ->
+    ) { args: Array<Any?> ->
         HistoryUiState(
-            measurements = measurements,
-            searchQuery = query,
-            isExporting = exporting,
-            exportContent = content,
-            error = error
+            measurements = args[0] as List<StreamMeasurement>,
+            searchQuery = args[1] as String,
+            selectedIds = args[2] as Set<Int>,
+            isExporting = args[3] as Boolean,
+            exportContent = args[4] as String?,
+            error = args[5] as String?
         )
     }.stateIn(
         scope = viewModelScope,
@@ -57,6 +61,31 @@ class HistoryViewModel(
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+    }
+
+    fun toggleSelection(id: Int) {
+        _selectedIds.update { if (it.contains(id)) it - id else it + id }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun exportSelected() {
+        val ids = _selectedIds.value.toList()
+        if (ids.isEmpty()) return
+        
+        viewModelScope.launch {
+            _isExporting.value = true
+            try {
+                val csvContent = exportStreamMeasurementUseCase(ids)
+                _exportContent.value = csvContent
+            } catch (e: Exception) {
+                _error.value = "Export failed: ${e.message}"
+            } finally {
+                _isExporting.value = false
+            }
+        }
     }
 
     fun exportMeasurement(measurement: StreamMeasurement) {

@@ -7,6 +7,9 @@ sealed class Screen(val route: String) {
     data object ReviewSegments : Screen("review_segments")
     data object FinalizeMeasurement : Screen("finalize_measurement")
     data object History : Screen("history")
+    data object MeasurementDetails : Screen("measurement_details/{measurementId}") {
+        fun createRoute(id: Int) = "measurement_details/$id"
+    }
     data object Device : Screen("device")
     data object Settings : Screen("settings")
 }

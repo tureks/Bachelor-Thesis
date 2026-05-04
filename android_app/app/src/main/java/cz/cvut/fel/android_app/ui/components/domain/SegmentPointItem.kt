@@ -2,8 +2,6 @@ package cz.cvut.fel.android_app.ui.components.domain
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,8 +18,7 @@ fun SegmentPointItem(
     unit: MeasurementUnit,
     isSelected: Boolean,
     onToggle: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onEdit: () -> Unit
 ) {
     val depthLabel = if (unit == MeasurementUnit.HYDROMETRIC) {
         String.format(Locale.US, "%.1f cm", point.height * 100)
@@ -39,7 +36,7 @@ fun SegmentPointItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 4.dp, end = 4.dp),
+                .padding(start = 4.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
@@ -48,7 +45,7 @@ fun SegmentPointItem(
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onEdit() }
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                    .padding(vertical = 14.dp, horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -61,15 +58,6 @@ fun SegmentPointItem(
                     text = depthLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
                 )
             }
         }

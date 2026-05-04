@@ -34,38 +34,41 @@ class UserViewModel(
     }
 
     fun updatePreferredUnit(unit: MeasurementUnit) {
-        val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            userRepository.saveUser(currentUser.copy(preferredUnit = unit))
+            val base = _uiState.value.user ?: defaultUser()
+            userRepository.saveUser(base.copy(preferredUnit = unit))
         }
     }
 
     fun updateMeasurementMode(isMultipoint: Boolean) {
-        val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            userRepository.saveUser(currentUser.copy(multipointMeasurement = isMultipoint))
+            val base = _uiState.value.user ?: defaultUser()
+            userRepository.saveUser(base.copy(multipointMeasurement = isMultipoint))
         }
     }
 
     fun updateProfile(firstName: String, lastName: String, email: String) {
-        val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            userRepository.saveUser(
-                currentUser.copy(
-                    firstName = firstName,
-                    lastName = lastName,
-                    email = email
-                )
-            )
+            val base = _uiState.value.user ?: defaultUser()
+            userRepository.saveUser(base.copy(firstName = firstName, lastName = lastName, email = email))
         }
     }
 
     fun updateSinglePointHeight(height: Double) {
-        val currentUser = _uiState.value.user ?: return
         viewModelScope.launch {
-            userRepository.saveUser(currentUser.copy(singlePointHeight = height))
+            val base = _uiState.value.user ?: defaultUser()
+            userRepository.saveUser(base.copy(singlePointHeight = height))
         }
     }
+
+    private fun defaultUser() = User(
+        firstName = "",
+        lastName = "",
+        email = "",
+        multipointMeasurement = true,
+        singlePointHeight = 0.6,
+        preferredUnit = MeasurementUnit.HYDROMETRIC
+    )
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {

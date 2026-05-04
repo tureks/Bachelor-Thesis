@@ -1,10 +1,8 @@
 package cz.cvut.fel.android_app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -17,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -76,20 +75,7 @@ fun CompleteSegmentScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Segment")
                         Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(100.dp),
-                            color = androidx.compose.ui.graphics.Color.Transparent,
-                            border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = segmentNumber.toString(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                            }
-                        }
+                        SegmentNumberBadge(segmentNumber)
                     }
                 },
                 onNavigateBack = onNavigateBack,
@@ -104,8 +90,10 @@ fun CompleteSegmentScreen(
             ExtendedFloatingActionButton(
                 onClick = {
                     if (isValid) {
-                        val w = width.toDoubleOrNull() ?: 0.0
-                        val d = depth.toDoubleOrNull() ?: 0.0
+                        val wRaw = width.toDoubleOrNull() ?: 0.0
+                        val dRaw = depth.toDoubleOrNull() ?: 0.0
+                        val w = if (isHydrometric) wRaw / 100.0 else wRaw
+                        val d = if (isHydrometric) dRaw / 100.0 else dRaw
                         viewModel.completeSegment(w, d, selectedPointIds)
                         onNavigateToMeasurement()
                     }
@@ -176,7 +164,7 @@ fun CompleteSegmentScreen(
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
             ) {
                 items(uiState.manualPoints, key = { it.id }) { point ->
                     SegmentPointItem(
@@ -190,66 +178,37 @@ fun CompleteSegmentScreen(
                                 selectedPointIds + point.id
                             }
                         },
-                        onEdit = { editingPoint = point },
-                        onDelete = { viewModel.deleteManualPoint(point.id) }
+                        onEdit = { editingPoint = point }
                     )
                 }
             }
 
-            Box(
+            OutlinedButton(
+                onClick = {
+                    val wRaw = width.toDoubleOrNull() ?: 0.0
+                    val dRaw = depth.toDoubleOrNull() ?: 0.0
+                    val w = if (isHydrometric) wRaw / 100.0 else wRaw
+                    val d = if (isHydrometric) dRaw / 100.0 else dRaw
+                    viewModel.completeSegment(w, d, selectedPointIds)
+                    onNavigateToFinalize()
+                },
+                enabled = isValid,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(top = 16.dp)
+                    .align(Alignment.Start)
             ) {
-                Surface(
-                    onClick = {
-                        if (isValid) {
-                            val w = width.toDoubleOrNull() ?: 0.0
-                            val d = depth.toDoubleOrNull() ?: 0.0
-                            viewModel.completeSegment(w, d, selectedPointIds)
-                            onNavigateToFinalize()
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 6.dp,
-                    border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier
-                        .height(56.dp)
-                        .align(Alignment.CenterStart),
-                    enabled = isValid
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .padding(horizontal = 24.dp)
-                            .fillMaxHeight()
-                    ) {
-                        Text(
-                            "Complete Measurement",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
+                Text("Complete Measurement")
             }
         }
     }
 
     if (showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Measurement") },
-            text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.cancelMeasurement()
-                    onNavigateToMain()
-                    showCancelDialog = false
-                }) { Text("Yes") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) { Text("No") }
+        CancelMeasurementDialog(
+            onDismiss = { showCancelDialog = false },
+            onConfirm = {
+                viewModel.cancelMeasurement()
+                showCancelDialog = false
+                onNavigateToMain()
             }
         )
     }

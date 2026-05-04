@@ -13,12 +13,14 @@ import cz.cvut.fel.android_app.ui.screens.ReviewSegmentsScreen
 import cz.cvut.fel.android_app.ui.screens.SettingsScreen
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
     measurementViewModel: StreamMeasurementViewModel,
-    historyViewModel: HistoryViewModel
+    historyViewModel: HistoryViewModel,
+    userViewModel: UserViewModel
 ) {
     val navigateToMain: () -> Unit = {
         navController.navigate(Screen.Main.route) {
@@ -48,15 +50,21 @@ fun AppNavigation(
                     }
                     navController.popBackStack()
                 },
-                onNavigateToCompleteSegment = { navController.navigate(Screen.CompleteSegment.route) }
+                onNavigateToCompleteSegment = {
+                    navController.navigate(Screen.CompleteSegment.route) { launchSingleTop = true }
+                }
             )
         }
         composable(Screen.CompleteSegment.route) {
             CompleteSegmentScreen(
                 viewModel = measurementViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToMeasurement = { navController.navigate(Screen.Measurement.route) },
-                onNavigateToFinalize = { navController.navigate(Screen.ReviewSegments.route) },
+                onNavigateToMeasurement = {
+                    navController.navigate(Screen.Measurement.route) { launchSingleTop = true }
+                },
+                onNavigateToFinalize = {
+                    navController.navigate(Screen.ReviewSegments.route) { launchSingleTop = true }
+                },
                 onNavigateToMain = navigateToMain
             )
         }
@@ -70,7 +78,9 @@ fun AppNavigation(
                     }
                     navController.popBackStack()
                 },
-                onNavigateToMetadata = { navController.navigate(Screen.FinalizeMeasurement.route) },
+                onNavigateToMetadata = {
+                    navController.navigate(Screen.FinalizeMeasurement.route) { launchSingleTop = true }
+                },
                 onNavigateToMain = navigateToMain
             )
         }
@@ -91,6 +101,7 @@ fun AppNavigation(
         }
         composable(Screen.Settings.route) {
             SettingsScreen(
+                viewModel = userViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

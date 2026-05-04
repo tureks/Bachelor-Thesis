@@ -29,7 +29,8 @@ class MainActivity : ComponentActivity() {
                 AppNavigation(
                     navController = navController,
                     measurementViewModel = measurementViewModel,
-                    historyViewModel = historyViewModel
+                    historyViewModel = historyViewModel,
+                    userViewModel = userViewModel
                 )
             }
         }

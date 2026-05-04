@@ -2,8 +2,10 @@ package cz.cvut.fel.android_app.ui.components.domain
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,14 +27,20 @@ fun EditSegmentDialog(
     onSave: (StreamSegment, List<VelocityPoint>) -> Unit
 ) {
     val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
-    
-    var widthInput by remember { 
-        mutableStateOf(if (isHydrometric) (segment.segmentWidth * 100).toString() else segment.segmentWidth.toString()) 
+
+    var widthInput by remember {
+        mutableStateOf(
+            if (isHydrometric) (segment.segmentWidth * 100).toString()
+            else segment.segmentWidth.toString()
+        )
     }
-    var depthInput by remember { 
-        mutableStateOf(if (isHydrometric) (segment.depth * 100).toString() else segment.depth.toString()) 
+    var depthInput by remember {
+        mutableStateOf(
+            if (isHydrometric) (segment.depth * 100).toString()
+            else segment.depth.toString()
+        )
     }
-    
+
     var localPoints by remember { mutableStateOf(points) }
 
     Dialog(
@@ -57,8 +65,8 @@ fun EditSegmentDialog(
                     text = "Edit Segment #${segment.segmentNumber}",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -66,6 +74,7 @@ fun EditSegmentDialog(
                         onValueChange = { widthInput = it },
                         label = { Text(if (isHydrometric) "Width (cm)" else "Width (m)") },
                         modifier = Modifier.weight(1f),
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(
@@ -73,36 +82,40 @@ fun EditSegmentDialog(
                         onValueChange = { depthInput = it },
                         label = { Text(if (isHydrometric) "Depth (cm)" else "Depth (m)") },
                         modifier = Modifier.weight(1f),
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
                     text = "Velocity Points",
                     style = MaterialTheme.typography.titleMedium
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
-                    itemsIndexed(localPoints) { index, point ->
+                    items(localPoints, key = { it.id }) { point ->
                         PointEditRow(
                             point = point,
                             unit = unit,
                             onUpdate = { updatedPoint ->
-                                localPoints = localPoints.toMutableList().apply {
-                                    set(index, updatedPoint)
-                                }
+                                localPoints = localPoints.map { if (it.id == updatedPoint.id) updatedPoint else it }
+                            },
+                            onDelete = {
+                                localPoints = localPoints.filter { it.id != point.id }
                             }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,10 +128,12 @@ fun EditSegmentDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val w = widthInput.toDoubleOrNull()
+                            val wRaw = widthInput.toDoubleOrNull()
                                 ?: if (isHydrometric) segment.segmentWidth * 100.0 else segment.segmentWidth
-                            val d = depthInput.toDoubleOrNull()
+                            val dRaw = depthInput.toDoubleOrNull()
                                 ?: if (isHydrometric) segment.depth * 100.0 else segment.depth
+                            val w = if (isHydrometric) wRaw / 100.0 else wRaw
+                            val d = if (isHydrometric) dRaw / 100.0 else dRaw
                             onSave(segment.copy(segmentWidth = w, depth = d), localPoints)
                         }
                     ) {
@@ -134,39 +149,63 @@ fun EditSegmentDialog(
 private fun PointEditRow(
     point: VelocityPoint,
     unit: MeasurementUnit,
-    onUpdate: (VelocityPoint) -> Unit
+    onUpdate: (VelocityPoint) -> Unit,
+    onDelete: () -> Unit
 ) {
     val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
-    
+
     var velocityInput by remember { mutableStateOf(point.velocity.toString()) }
-    var heightInput by remember { 
-        mutableStateOf(if (isHydrometric) ((point.measureHeight ?: 0.0) * 100.0).toString() else (point.measureHeight ?: 0.0).toString()) 
+    var heightInput by remember {
+        mutableStateOf(
+            if (isHydrometric) ((point.measureHeight ?: 0.0) * 100.0).toString()
+            else (point.measureHeight ?: 0.0).toString()
+        )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = MaterialTheme.shapes.medium
     ) {
-        OutlinedTextField(
-            value = velocityInput,
-            onValueChange = { 
-                velocityInput = it
-                it.toDoubleOrNull()?.let { v -> onUpdate(point.copy(velocity = v)) }
-            },
-            label = { Text("v (m/s)") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-        )
-        OutlinedTextField(
-            value = heightInput,
-            onValueChange = {
-                heightInput = it
-                it.toDoubleOrNull()?.let { h -> onUpdate(point.copy(measureHeight = h)) }
-            },
-            label = { Text(if (isHydrometric) "h (cm)" else "h (m)") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = velocityInput,
+                onValueChange = {
+                    velocityInput = it
+                    it.toDoubleOrNull()?.let { v -> onUpdate(point.copy(velocity = v)) }
+                },
+                label = { Text("v (m/s)") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+            OutlinedTextField(
+                value = heightInput,
+                onValueChange = {
+                    heightInput = it
+                    it.toDoubleOrNull()?.let { h ->
+                        val meters = if (isHydrometric) h / 100.0 else h
+                        onUpdate(point.copy(measureHeight = meters))
+                    }
+                },
+                label = { Text(if (isHydrometric) "h (cm)" else "h (m)") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete point",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }

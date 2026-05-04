@@ -15,7 +15,8 @@ fun AppTextField(
     label: String? = null,
     placeholder: String? = null,
     leadingIcon: ImageVector? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    singleLine: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
@@ -24,6 +25,7 @@ fun AppTextField(
         label = label?.let { { Text(it) } },
         placeholder = placeholder?.let { { Text(it) } },
         leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = null) } },
-        keyboardOptions = keyboardOptions
+        keyboardOptions = keyboardOptions,
+        singleLine = singleLine
     )
 }

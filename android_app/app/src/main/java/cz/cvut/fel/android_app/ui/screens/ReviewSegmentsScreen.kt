@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditSegmentDialog
 import cz.cvut.fel.android_app.ui.components.domain.SegmentSummaryItem
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -88,7 +89,7 @@ fun ReviewSegmentsScreen(
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
             ) {
                 items(uiState.segments, key = { it.id }) { segment ->
                     SegmentSummaryItem(
@@ -102,18 +103,11 @@ fun ReviewSegmentsScreen(
     }
 
     if (showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Measurement") },
-            text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.cancelMeasurement()
-                    onNavigateToMain()
-                }) { Text("Yes") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) { Text("No") }
+        CancelMeasurementDialog(
+            onDismiss = { showCancelDialog = false },
+            onConfirm = {
+                viewModel.cancelMeasurement()
+                onNavigateToMain()
             }
         )
     }

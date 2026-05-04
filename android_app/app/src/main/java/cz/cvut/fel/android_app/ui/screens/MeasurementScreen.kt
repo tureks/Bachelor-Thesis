@@ -1,11 +1,9 @@
 package cz.cvut.fel.android_app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
@@ -16,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -42,20 +41,7 @@ fun MeasurementScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Segment Capture")
                         Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(100.dp),
-                            color = androidx.compose.ui.graphics.Color.Transparent,
-                            border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = segmentNumber.toString(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                            }
-                        }
+                        SegmentNumberBadge(segmentNumber)
                     }
                 },
                 onNavigateBack = onNavigateBack,
@@ -74,6 +60,10 @@ fun MeasurementScreen(
             )
         }
     ) { paddingValues ->
+        val pointVelocities = uiState.manualPoints.map { it.velocity }
+        val minVelocity = pointVelocities.minOrNull()
+        val maxVelocity = pointVelocities.maxOrNull()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,6 +87,38 @@ fun MeasurementScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
+                if (minVelocity != null && maxVelocity != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = String.format(Locale.US, "%.2f m/s", minVelocity),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Min",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = String.format(Locale.US, "%.2f m/s", maxVelocity),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Max",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -144,7 +166,7 @@ fun MeasurementScreen(
                         .fillMaxWidth()
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
                 ) {
                     items(uiState.manualPoints, key = { it.id }) { point ->
                         ManualPointItem(
@@ -156,50 +178,23 @@ fun MeasurementScreen(
                 }
             }
 
-            Box(
+            OutlinedIconButton(
+                onClick = { showTimeWindowDialog = true },
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(top = 16.dp)
+                    .align(Alignment.Start)
             ) {
-                Surface(
-                    onClick = { showTimeWindowDialog = true },
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 6.dp,
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier
-                        .size(56.dp)
-                        .align(Alignment.CenterStart)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Time Window Settings",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
+                Icon(Icons.Default.Settings, contentDescription = "Time Window Settings")
             }
         }
     }
 
     if (showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Measurement") },
-            text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.cancelMeasurement()
-                    onNavigateBack()
-                }) { Text("Yes") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) { Text("No") }
+        CancelMeasurementDialog(
+            onDismiss = { showCancelDialog = false },
+            onConfirm = {
+                viewModel.cancelMeasurement()
+                onNavigateBack()
             }
         )
     }

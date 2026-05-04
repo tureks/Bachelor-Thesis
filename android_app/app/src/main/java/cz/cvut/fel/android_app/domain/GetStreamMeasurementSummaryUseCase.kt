@@ -17,11 +17,15 @@ class GetStreamMeasurementSummaryUseCase(
             return StreamMeasurementTotals(0.0, 0.0, 0.0, 0)
         }
 
+        val allVelocities = segments.flatMap { repository.getVelocityPoints(it.id).map { p -> p.velocity } }
+
         return StreamMeasurementTotals(
             totalWidth = segments.sumOf { it.segmentWidth },
             maxDepth = segments.maxOf { it.depth },
             totalFlow = segments.sumOf { it.segmentFlow },
-            segmentCount = segments.size
+            segmentCount = segments.size,
+            minVelocity = allVelocities.minOrNull() ?: 0.0,
+            maxVelocity = allVelocities.maxOrNull() ?: 0.0
         )
     }
 }

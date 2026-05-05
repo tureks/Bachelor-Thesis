@@ -16,40 +16,29 @@ class UpdateStreamSegmentUseCase(
 ) {
     /**
      * Updates an existing segment and its points.
-     * Inputs (segment.segmentWidth, segment.depth) are expected in user's preferred unit (cm/m).
+     * All values (segment.segmentWidth, segment.depth) must be in SI units (meters).
      */
     suspend operator fun invoke(
         segment: StreamSegment,
         updatedPoints: List<VelocityPoint>
     ): ValidationResult {
-        val user = userRepository.user.first()
-        val isHydrometric = user?.preferredUnit == MeasurementUnit.HYDROMETRIC
-
-        // Convert UI inputs to Metric (m)
-        val widthMetric = if (isHydrometric) segment.segmentWidth / 100.0 else segment.segmentWidth
-        val depthMetric = if (isHydrometric) segment.depth / 100.0 else segment.depth
+        val width = segment.segmentWidth
+        val depth = segment.depth
 
         val avgVelocity = if (updatedPoints.isEmpty()) 0.0 else {
             updatedPoints.sumOf { it.velocity } / updatedPoints.size
         }
 
-        // --- VALIDATION CHECK ---
-        val validation = validator(
-            width = widthMetric,
-            depth = depthMetric,
-            velocity = avgVelocity
-        )
+        val validation = validator(width = width, depth = depth, velocity = avgVelocity)
         if (validation is ValidationResult.Error) return validation
 
-        // Recalculate flow
-        val flowMetric = avgVelocity * widthMetric * depthMetric
+        val flow = avgVelocity * width * depth
 
-        // Prepare finalized segment (Metric)
         val finalizedSegment = segment.copy(
-            segmentWidth = widthMetric,
-            depth = depthMetric,
+            segmentWidth = width,
+            depth = depth,
             averageVelocity = avgVelocity,
-            segmentFlow = flowMetric
+            segmentFlow = flow
         )
 
         repository.updateSegment(finalizedSegment)

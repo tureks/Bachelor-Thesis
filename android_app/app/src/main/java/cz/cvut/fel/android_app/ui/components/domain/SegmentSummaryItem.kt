@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamSegment
-import java.util.Locale
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 
 @Composable
 fun SegmentSummaryItem(
@@ -18,25 +18,9 @@ fun SegmentSummaryItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
-
-    val widthLabel = if (isHydrometric) {
-        String.format(Locale.US, "%.0f cm", segment.segmentWidth * 100)
-    } else {
-        String.format(Locale.US, "%.2f m", segment.segmentWidth)
-    }
-
-    val depthLabel = if (isHydrometric) {
-        String.format(Locale.US, "%.0f cm", segment.depth * 100)
-    } else {
-        String.format(Locale.US, "%.2f m", segment.depth)
-    }
-
-    val flowLabel = if (isHydrometric) {
-        String.format(Locale.US, "%.2f l/s", segment.segmentFlow * 1000)
-    } else {
-        String.format(Locale.US, "%.3f m³/s", segment.segmentFlow)
-    }
+    val widthLabel = UnitConverter.formatLength(segment.segmentWidth, unit)
+    val depthLabel = UnitConverter.formatLength(segment.depth, unit)
+    val flowLabel = UnitConverter.formatFlow(segment.segmentFlow, unit, decimals = if (unit == MeasurementUnit.HYDROMETRIC) 2 else 3)
 
     Card(
         modifier = modifier
@@ -65,7 +49,7 @@ fun SegmentSummaryItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = String.format(Locale.US, "%.2f m/s  →  $flowLabel", segment.averageVelocity),
+                    text = String.format(java.util.Locale.US, "%.2f m/s  →  $flowLabel", segment.averageVelocity),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

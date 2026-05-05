@@ -18,6 +18,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppButton
+import cz.cvut.fel.android_app.ui.components.base.AppLogo
 import cz.cvut.fel.android_app.ui.components.base.AppOutlinedButton
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -44,6 +45,16 @@ fun MainScreen(
         topBar = {
             AppTopBar(
                 title = "Stream Measurement",
+                titleContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppLogo(modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Water Flow",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                },
                 actions = {
                     TextButton(
                         onClick = onNavigateToDevice,
@@ -84,7 +95,6 @@ fun MainScreen(
                 AppButton(
                     text = "New Measurement",
                     icon = Icons.Default.Add,
-                    enabled = isConnected,
                     onClick = {
                         if (uiState.measurement != null) {
                             showOverwriteDialog = true
@@ -100,7 +110,6 @@ fun MainScreen(
                     AppButton(
                         text = "Continue Measurement",
                         icon = Icons.Default.PlayArrow,
-                        enabled = isConnected,
                         onClick = { onNavigateToMeasurement() }
                     )
                 }

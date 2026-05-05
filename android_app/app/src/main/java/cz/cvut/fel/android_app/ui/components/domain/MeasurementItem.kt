@@ -6,9 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,16 +22,12 @@ import java.util.Locale
 @Composable
 fun MeasurementItem(
     measurement: StreamMeasurement,
-    onExport: () -> Unit,
-    onDelete: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onLongClick: () -> Unit = {},
     isSelected: Boolean = false,
     selectionMode: Boolean = false
 ) {
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US)
     val formattedDate = dateFormat.format(Date(measurement.measureTimestamp))
 
@@ -92,45 +86,8 @@ fun MeasurementItem(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-
-                if (!selectionMode) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { showDeleteConfirmation = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        IconButton(onClick = onExport) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Export",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
             }
         }
-    }
-
-    if (showDeleteConfirmation) {
-        DeleteConfirmationDialog(
-            onDismiss = { showDeleteConfirmation = false },
-            onConfirm = {
-                onDelete()
-                showDeleteConfirmation = false
-            },
-            title = "Delete Measurement",
-            message = "Are you sure you want to delete measurement \"${measurement.name}\"?"
-        )
     }
 }
 

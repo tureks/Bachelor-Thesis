@@ -35,7 +35,6 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    var measurementToDelete by remember { mutableStateOf<StreamMeasurement?>(null) }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
 
@@ -50,18 +49,41 @@ fun HistoryScreen(
 
     LaunchedEffect(uiState.exportContent) {
         uiState.exportContent?.let { content ->
-            val file = File(context.cacheDir, "measurements_export.csv")
+            val names = uiState.exportedMeasurementNames
+            val safeBase = names.firstOrNull()
+                ?.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                ?.take(40) ?: "measurements"
+            val filename = if (names.size == 1) "${safeBase}_export.csv"
+                           else "measurements_${names.size}_export.csv"
+
+            val file = File(context.cacheDir, filename)
             file.writeText(content)
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            
+
+            val subject = if (names.size == 1) "Stream Measurement Report: ${names[0]}"
+                          else "Stream Measurement Reports (${names.size} measurements)"
+            val body = buildString {
+                append("Please find attached the stream gauging measurement report")
+                if (names.size == 1) append(" for \"${names[0]}\"")
+                append(".")
+                if (uiState.operatorName.isNotEmpty()) append("\n\nOperator: ${uiState.operatorName}")
+            }
+
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
+                type = "message/rfc822"
+                if (uiState.userEmail.isNotEmpty()) {
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf(uiState.userEmail))
+                }
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Streamflow Measurements Export")
-                putExtra(Intent.EXTRA_TEXT, "Attached is the exported streamflow measurement data.")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Share Export"))
+            try {
+                context.startActivity(Intent.createChooser(intent, "Send Report via Email"))
+            } catch (_: android.content.ActivityNotFoundException) {
+                snackbarHostState.showSnackbar("No email app found")
+            }
             viewModel.clearExportContent()
         }
     }
@@ -117,8 +139,6 @@ fun HistoryScreen(
                         measurement = measurement,
                         isSelected = isSelected,
                         selectionMode = selectionMode,
-                        onExport = { viewModel.exportMeasurement(measurement) },
-                        onDelete = { measurementToDelete = measurement },
                         onClick = {
                             if (selectionMode) {
                                 viewModel.toggleSelection(measurement.id)
@@ -133,17 +153,5 @@ fun HistoryScreen(
                 }
             }
         }
-    }
-
-    if (measurementToDelete != null) {
-        DeleteConfirmationDialog(
-            onDismiss = { measurementToDelete = null },
-            onConfirm = {
-                measurementToDelete?.let { viewModel.deleteMeasurement(it) }
-                measurementToDelete = null
-            },
-            title = "Delete Measurement",
-            message = "Are you sure you want to delete '${measurementToDelete?.name}'? This action cannot be undone."
-        )
     }
 }

@@ -13,15 +13,13 @@ import cz.cvut.fel.android_app.domain.repository.BleRepository
 import cz.cvut.fel.android_app.domain.repository.LocationRepository
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
-private fun Double.toInputString(): String =
-    if (this % 1.0 == 0.0) toLong().toString() else toString()
 
 data class VelocityReading(val velocity: Double, val timestamp: Long)
 data class ManualVelocityPoint(val id: Long, val velocity: Double, val height: Double = 0.0)
@@ -58,6 +56,7 @@ class StreamMeasurementViewModel(
     private val completeSegmentUseCase: CompleteStreamSegmentUseCase,
     private val completeMeasurementUseCase: CompleteStreamMeasurementUseCase,
     private val updateSegmentUseCase: UpdateStreamSegmentUseCase,
+    private val updateMeasurementUseCase: UpdateStreamMeasurementUseCase,
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase,
     private val bleRepository: BleRepository,
     private val locationRepository: LocationRepository,
@@ -67,6 +66,7 @@ class StreamMeasurementViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     private val _timeWindow = MutableStateFlow(10)
+    private var _singlePointHeightPercent: Double = 60.0
     private val _manualPoints = MutableStateFlow<List<ManualVelocityPoint>>(emptyList())
     private val _currentWidth = MutableStateFlow("")
     private val _currentDepth = MutableStateFlow("")
@@ -137,6 +137,12 @@ class StreamMeasurementViewModel(
     .sample(1200L)
     .distinctUntilChanged()
     .onStart { emit(0.0) }
+
+    init {
+        userRepository.user
+            .onEach { user -> _singlePointHeightPercent = (user?.singlePointHeight ?: 0.6) * 100.0 }
+            .launchIn(viewModelScope)
+    }
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<StreamMeasurementUiState> = combine(
@@ -214,10 +220,9 @@ class StreamMeasurementViewModel(
             // Populate manual points so they appear in Measurement and Complete screens
             _manualPoints.value = points.map { ManualVelocityPoint(it.id.toLong(), it.velocity, it.measureHeight ?: 0.0) }
             
-            _currentWidth.value = if (uiState.value.preferredUnit == MeasurementUnit.HYDROMETRIC)
-                (segment.segmentWidth * 100).toInputString() else segment.segmentWidth.toInputString()
-            _currentDepth.value = if (uiState.value.preferredUnit == MeasurementUnit.HYDROMETRIC)
-                (segment.depth * 100).toInputString() else segment.depth.toInputString()
+            val unit = uiState.value.preferredUnit
+            _currentWidth.value = UnitConverter.metersToInput(segment.segmentWidth, unit)
+            _currentDepth.value = UnitConverter.metersToInput(segment.depth, unit)
         }
     }
 
@@ -234,7 +239,7 @@ class StreamMeasurementViewModel(
 
     fun addManualPoint() {
         val avg = uiState.value.windowAverage
-        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = 60.0) }
+        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = _singlePointHeightPercent) }
     }
 
     fun updateManualPointHeight(id: Long, height: Double) {
@@ -319,8 +324,8 @@ class StreamMeasurementViewModel(
                     rawCollector.cancel()
                     _captureState.update { it.copy(isCapturing = false, points = emptyList()) }
                     val avg = readings.average()
-                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = 60.0) }
-                    this.cancel() 
+                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = _singlePointHeightPercent) }
+                    this.cancel()
                 }
             }
         }
@@ -330,20 +335,22 @@ class StreamMeasurementViewModel(
         val measurementId = uiState.value.measurement?.id ?: return
         val editingSegment = uiState.value.editingSegment
         val points = uiState.value.manualPoints
-        
-        // If not editing, we need manual points. 
-        // If editing, we might just be updating dimensions of an already saved segment.
+
         if (editingSegment == null && points.isEmpty()) {
             _error.value = "No velocity data captured."
             return
         }
+
+        val unit = uiState.value.preferredUnit
+        val widthMetric = UnitConverter.displayToMeters(width, unit)
+        val depthMetric = UnitConverter.displayToMeters(depth, unit)
 
         viewModelScope.launch {
             try {
                 if (editingSegment != null) {
                     val filteredPoints = points.filter { selectedPointIds.contains(it.id) }
                     updateSegmentUseCase(
-                        editingSegment.copy(segmentWidth = width, depth = depth),
+                        editingSegment.copy(segmentWidth = widthMetric, depth = depthMetric),
                         filteredPoints.map { VelocityPoint(segmentId = editingSegment.id, velocity = it.velocity, measureHeight = it.height) }
                     )
                     _editingSegment.value = null
@@ -356,8 +363,8 @@ class StreamMeasurementViewModel(
                     }
                     completeSegmentUseCase(
                         measurementId = measurementId,
-                        segmentWidth = width,
-                        depth = depth,
+                        segmentWidth = widthMetric,
+                        depth = depthMetric,
                         points = filteredPoints.map { CapturedVelocityPoint(it.velocity, it.height) },
                         selectedIndices = filteredPoints.indices.toSet()
                     )
@@ -381,6 +388,13 @@ class StreamMeasurementViewModel(
             } catch (e: Exception) {
                 _error.value = e.message
             }
+        }
+    }
+
+    fun updateMeasurementMetadata(name: String, note: String) {
+        val currentId = uiState.value.measurement?.id ?: return
+        viewModelScope.launch {
+            updateMeasurementUseCase(currentId, name, note)
         }
     }
 
@@ -439,6 +453,7 @@ class StreamMeasurementViewModel(
                         validator,
                         summaryUseCase
                     ),
+                    updateMeasurementUseCase = UpdateStreamMeasurementUseCase(app.measurementRepository),
                     getSummaryUseCase = summaryUseCase,
                     bleRepository = app.bleRepository,
                     locationRepository = app.locationRepository,

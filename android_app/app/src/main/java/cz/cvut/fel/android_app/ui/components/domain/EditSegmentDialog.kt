@@ -17,6 +17,7 @@ import androidx.compose.ui.window.DialogProperties
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import java.util.Locale
 
 @Composable
@@ -27,19 +28,12 @@ fun EditSegmentDialog(
     onDismiss: () -> Unit,
     onSave: (StreamSegment, List<VelocityPoint>) -> Unit
 ) {
-    val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
 
     var widthInput by remember {
-        mutableStateOf(
-            if (isHydrometric) (segment.segmentWidth * 100).toString()
-            else segment.segmentWidth.toString()
-        )
+        mutableStateOf(UnitConverter.metersToInput(segment.segmentWidth, unit))
     }
     var depthInput by remember {
-        mutableStateOf(
-            if (isHydrometric) (segment.depth * 100).toString()
-            else segment.depth.toString()
-        )
+        mutableStateOf(UnitConverter.metersToInput(segment.depth, unit))
     }
 
     var localPoints by remember { mutableStateOf(points) }
@@ -74,7 +68,7 @@ fun EditSegmentDialog(
                     OutlinedTextField(
                         value = widthInput,
                         onValueChange = { widthInput = it },
-                        label = { Text(if (isHydrometric) "Width (cm)" else "Width (m)") },
+                        label = { Text("Width (${UnitConverter.lengthLabel(unit)})") },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -82,7 +76,7 @@ fun EditSegmentDialog(
                     OutlinedTextField(
                         value = depthInput,
                         onValueChange = { depthInput = it },
-                        label = { Text(if (isHydrometric) "Depth (cm)" else "Depth (m)") },
+                        label = { Text("Depth (${UnitConverter.lengthLabel(unit)})") },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -130,10 +124,12 @@ fun EditSegmentDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val w = widthInput.toDoubleOrNull()
-                                ?: if (isHydrometric) segment.segmentWidth * 100.0 else segment.segmentWidth
-                            val d = depthInput.toDoubleOrNull()
-                                ?: if (isHydrometric) segment.depth * 100.0 else segment.depth
+                            val wInput = widthInput.toDoubleOrNull()
+                            val dInput = depthInput.toDoubleOrNull()
+
+                            val w = if (wInput != null) UnitConverter.displayToMeters(wInput, unit) else segment.segmentWidth
+                            val d = if (dInput != null) UnitConverter.displayToMeters(dInput, unit) else segment.depth
+
                             onSave(segment.copy(segmentWidth = w, depth = d), localPoints)
                         }
                     ) {
@@ -164,12 +160,10 @@ private fun PointEditRow(
     onUpdate: (VelocityPoint) -> Unit,
     onDelete: () -> Unit
 ) {
-    val isHydrometric = unit == MeasurementUnit.HYDROMETRIC
-
     var velocityInput by remember { mutableStateOf(point.velocity.toString()) }
     var heightInput by remember {
         mutableStateOf(
-            String.format(Locale.US, "%.2f", (point.measureHeight ?: 0.0) / 100.0)
+            String.format(Locale.US, "%.0f", point.measureHeight ?: 0.0)
         )
     }
 
@@ -200,7 +194,7 @@ private fun PointEditRow(
                 onValueChange = {
                     heightInput = it
                     it.toDoubleOrNull()?.let { h ->
-                        onUpdate(point.copy(measureHeight = h * 100.0))
+                        onUpdate(point.copy(measureHeight = h))
                     }
                 },
                 label = { Text("h (%)") },

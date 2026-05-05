@@ -48,10 +48,7 @@ fun VelocityGraph(
         val now = System.currentTimeMillis()
         val windowMillis = windowSeconds * 1000L
 
-        val segmentStartTime = readings.firstOrNull()?.timestamp ?: now
-        val elapsedMs = (now - segmentStartTime).coerceAtLeast(1L)
-        val visibleWindowMs = minOf(elapsedMs, windowMillis).coerceAtLeast(1L)
-        val startTime = now - visibleWindowMs
+        val startTime = now - windowMillis
 
         // Background and axes
         drawRect(
@@ -81,14 +78,11 @@ fun VelocityGraph(
         val bottomLabel = textMeasurer.measure(String.format(Locale.US, "%.1f", yMin), style = textStyle)
         drawText(bottomLabel, topLeft = Offset(leftPadding - bottomLabel.size.width - 6f, topPadding + graphHeight - bottomLabel.size.height))
 
-        // X labels — elapsed seconds from segment start
-        val leftElapsedSec = ((startTime - segmentStartTime) / 1000).toInt()
-        val rightElapsedSec = (elapsedMs / 1000).toInt()
-
-        val startLabel = textMeasurer.measure("${leftElapsedSec}s", style = textStyle)
+        // X labels — fixed window span to avoid label-width jitter
+        val startLabel = textMeasurer.measure("0s", style = textStyle)
         drawText(startLabel, topLeft = Offset(leftPadding, topPadding + graphHeight + 4.dp.toPx()))
 
-        val endLabel = textMeasurer.measure("${rightElapsedSec}s", style = textStyle)
+        val endLabel = textMeasurer.measure("${windowSeconds}s", style = textStyle)
         drawText(endLabel, topLeft = Offset(size.width - rightPadding - endLabel.size.width, topPadding + graphHeight + 4.dp.toPx()))
 
         if (visibleReadings.size < 2) return@Canvas
@@ -97,7 +91,7 @@ fun VelocityGraph(
             val path = Path()
             val points = visibleReadings.map { reading ->
                 Offset(
-                    x = leftPadding + (reading.timestamp - startTime).toFloat() / visibleWindowMs.toFloat() * graphWidth,
+                    x = leftPadding + (reading.timestamp - startTime).toFloat() / windowMillis.toFloat() * graphWidth,
                     y = topPadding + graphHeight - ((reading.velocity.toFloat() - yMin.toFloat()) / (yMax - yMin).toFloat() * graphHeight)
                 )
             }

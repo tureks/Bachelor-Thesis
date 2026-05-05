@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
@@ -39,11 +40,18 @@ fun CompleteSegmentScreen(
     onNavigateToMain: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var selectedPointIds by remember { mutableStateOf(uiState.manualPoints.map { it.id }.toSet()) }
 
-    // Keep selection in sync when navigating back or when points change
     LaunchedEffect(uiState.manualPoints) {
         selectedPointIds = uiState.manualPoints.map { it.id }.toSet()
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
     }
 
     var editingPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
@@ -54,32 +62,26 @@ fun CompleteSegmentScreen(
     val depth = uiState.currentDepth
 
     val isValid = width.isNotEmpty() && depth.isNotEmpty() && (selectedPointIds.isNotEmpty() || uiState.editingSegment != null)
-    val isHydrometric = uiState.preferredUnit == MeasurementUnit.HYDROMETRIC
-    
     val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
 
-    val calculatedFlow = remember(width, depth, selectedPointIds, uiState.manualPoints, isHydrometric) {
-        val wRaw = width.toDoubleOrNull() ?: 0.0
-        val dRaw = depth.toDoubleOrNull() ?: 0.0
-        
-        val w = if (isHydrometric) wRaw / 100.0 else wRaw
-        val d = if (isHydrometric) dRaw / 100.0 else dRaw
-        
+    val unit = uiState.preferredUnit
+    val calculatedFlow = remember(width, depth, selectedPointIds, uiState.manualPoints, unit) {
+        val w = UnitConverter.displayToMeters(width.toDoubleOrNull() ?: 0.0, unit)
+        val d = UnitConverter.displayToMeters(depth.toDoubleOrNull() ?: 0.0, unit)
         val selectedPoints = uiState.manualPoints.filter { selectedPointIds.contains(it.id) }
         val avgV = if (selectedPoints.isEmpty()) {
             uiState.editingSegment?.averageVelocity ?: 0.0
         } else {
             selectedPoints.map { it.velocity }.average()
         }
-        val flowM3 = avgV * w * d
-        
-        if (isHydrometric) flowM3 * 1000.0 else flowM3
+        UnitConverter.m3sToDisplay(avgV * w * d, unit)
     }
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "Segment",
@@ -111,7 +113,7 @@ fun CompleteSegmentScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = String.format(Locale.US, "%.2f %s", calculatedFlow, if (isHydrometric) "l/s" else "m³/s"),
+                    text = String.format(Locale.US, "%.2f %s", calculatedFlow, UnitConverter.flowLabel(unit)),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -134,14 +136,14 @@ fun CompleteSegmentScreen(
                 AppTextField(
                     value = width,
                     onValueChange = { viewModel.setCurrentWidth(it) },
-                    label = if (isHydrometric) "Width (cm)" else "Width (m)",
+                    label = "Width (${UnitConverter.lengthLabel(unit)})",
                     modifier = Modifier.weight(1f),
                     keyboardOptions = DecimalKeyboard
                 )
                 AppTextField(
                     value = depth,
                     onValueChange = { viewModel.setCurrentDepth(it) },
-                    label = if (isHydrometric) "Depth (cm)" else "Depth (m)",
+                    label = "Depth (${UnitConverter.lengthLabel(unit)})",
                     modifier = Modifier.weight(1f),
                     keyboardOptions = DecimalKeyboard
                 )

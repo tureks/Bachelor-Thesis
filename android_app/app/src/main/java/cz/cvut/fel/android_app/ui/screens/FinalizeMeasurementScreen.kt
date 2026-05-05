@@ -14,8 +14,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
 import java.util.Locale
@@ -28,19 +28,28 @@ fun FinalizeMeasurementScreen(
     onNavigateToMain: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var name by remember(uiState.measurement?.id) { mutableStateOf(uiState.measurement?.name ?: "") }
     var note by remember(uiState.measurement?.id) { mutableStateOf(uiState.measurement?.note ?: "") }
     var showCancelDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
     val isNameValid = name.isNotBlank()
     val location = uiState.currentLocation
-    val isHydrometric = uiState.preferredUnit == MeasurementUnit.HYDROMETRIC
+    val unit = uiState.preferredUnit
     val totals = uiState.totals
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "Save Measurement",
@@ -75,10 +84,7 @@ fun FinalizeMeasurementScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Total Flow", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
-                                text = String.format(Locale.US, "%.3f %s",
-                                    if (isHydrometric) totals.totalFlow * 1000.0 else totals.totalFlow,
-                                    if (isHydrometric) "l/s" else "m³/s"
-                                ),
+                                text = UnitConverter.formatFlow(totals.totalFlow, unit, decimals = 3),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -86,10 +92,7 @@ fun FinalizeMeasurementScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Total Width", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
-                                text = String.format(Locale.US, "%.2f %s",
-                                    if (isHydrometric) totals.totalWidth * 100.0 else totals.totalWidth,
-                                    if (isHydrometric) "cm" else "m"
-                                ),
+                                text = UnitConverter.formatLength(totals.totalWidth, unit),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -97,10 +100,7 @@ fun FinalizeMeasurementScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Max Depth", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
-                                text = String.format(Locale.US, "%.2f %s",
-                                    if (isHydrometric) totals.maxDepth * 100.0 else totals.maxDepth,
-                                    if (isHydrometric) "cm" else "m"
-                                ),
+                                text = UnitConverter.formatLength(totals.maxDepth, unit),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )

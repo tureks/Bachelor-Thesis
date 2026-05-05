@@ -158,7 +158,6 @@ fun AppNavigation(
                     measurementViewModel = measurementViewModel,
                     onNavigateBack = { navController.safePopBackStack() },
                     onEditMeasurement = {
-                        navController.navigate(Screen.Measurement.route)
                     }
                 )
             }

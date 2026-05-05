@@ -16,7 +16,7 @@ class CompleteStreamSegmentUseCase(
 
     /**
      * Finalizes the segment by saving it and its associated points to the database.
-     * Inputs (segmentWidth, depth) are expected in the user's preferred unit (cm or m).
+     * Inputs (segmentWidth, depth) must be in SI units (meters).
      */
     suspend operator fun invoke(
         measurementId: Int,
@@ -25,19 +25,12 @@ class CompleteStreamSegmentUseCase(
         points: List<CapturedVelocityPoint>,
         selectedIndices: Set<Int>
     ) {
-        val user = userRepository.user.first()
-        val isHydrometric = user?.preferredUnit == MeasurementUnit.HYDROMETRIC
-
-        // Convert UI inputs to Metric (m) if they were entered in cm
-        val widthMetric = if (isHydrometric) segmentWidth / 100.0 else segmentWidth
-        val depthMetric = if (isHydrometric) depth / 100.0 else depth
-
         // Determine the next segment number based on existing count
         val existingSegments = repository.getSegments(measurementId)
         val nextNumber = existingSegments.size + 1
 
         // Get the final calculation (always works in Metric internally)
-        val result = calculateUseCase(widthMetric, depthMetric, points, selectedIndices)
+        val result = calculateUseCase(segmentWidth, depth, points, selectedIndices)
 
         // Map to the persistence model (StreamSegment) - always stored in meters
         val segment = StreamSegment(

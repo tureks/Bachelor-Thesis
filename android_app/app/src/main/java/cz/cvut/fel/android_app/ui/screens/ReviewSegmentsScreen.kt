@@ -10,13 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditSegmentDialog
 import cz.cvut.fel.android_app.ui.components.domain.SegmentSummaryItem
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
-import java.util.Locale
 
 @Composable
 fun ReviewSegmentsScreen(
@@ -27,7 +26,7 @@ fun ReviewSegmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
-    val isHydrometric = uiState.preferredUnit == MeasurementUnit.HYDROMETRIC
+    val unit = uiState.preferredUnit
 
     Scaffold(
         topBar = {
@@ -61,12 +60,7 @@ fun ReviewSegmentsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = String.format(
-                        Locale.US, "%.2f %s",
-                        if (isHydrometric) (uiState.totals?.totalFlow ?: 0.0) * 1000.0
-                        else (uiState.totals?.totalFlow ?: 0.0),
-                        if (isHydrometric) "l/s" else "m³/s"
-                    ),
+                    text = UnitConverter.formatFlow(uiState.totals?.totalFlow ?: 0.0, unit),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

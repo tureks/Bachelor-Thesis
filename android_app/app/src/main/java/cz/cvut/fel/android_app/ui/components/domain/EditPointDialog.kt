@@ -26,7 +26,7 @@ fun EditPointDialog(
 ) {
     val initialHeight = point.height
     var heightInput by remember {
-        mutableStateOf(String.format(Locale.US, "%.2f", initialHeight / 100.0))
+        mutableStateOf(String.format(Locale.US, "%.0f", initialHeight))
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -74,8 +74,8 @@ fun EditPointDialog(
                 OutlinedTextField(
                     value = heightInput,
                     onValueChange = { heightInput = it },
-                    label = { Text("Measurement Depth") },
-                    placeholder = { Text("e.g. 0.6") },
+                    label = { Text("Measurement Depth (%)") },
+                    placeholder = { Text("e.g. 60") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -122,7 +122,7 @@ fun EditPointDialog(
                     Button(
                         onClick = {
                             heightInput.toDoubleOrNull()?.let {
-                                onUpdateHeight(it * 100.0)
+                                onUpdateHeight(it)
                             }
                         }
                     ) {

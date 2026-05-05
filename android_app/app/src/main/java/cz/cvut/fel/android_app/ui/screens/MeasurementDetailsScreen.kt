@@ -1,6 +1,5 @@
 package cz.cvut.fel.android_app.ui.screens
 
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,18 +11,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
+import androidx.compose.ui.res.stringResource
+import cz.cvut.fel.android_app.R
+import cz.cvut.fel.android_app.ui.components.ExportShareConfig
+import cz.cvut.fel.android_app.ui.components.ExportShareEffect
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
-import cz.cvut.fel.android_app.ui.utils.UnitConverter
+import cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditMeasurementMetadataDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditSegmentDialog
 import cz.cvut.fel.android_app.ui.components.domain.SegmentSummaryItem
-import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
-import java.io.File
+import cz.cvut.fel.android_app.ui.theme.Dimens
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
+import cz.cvut.fel.android_app.viewmodel.MeasurementDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,99 +30,67 @@ import java.util.Locale
 @Composable
 fun MeasurementDetailsScreen(
     measurementId: Int,
-    historyViewModel: HistoryViewModel,
-    measurementViewModel: StreamMeasurementViewModel,
-    onNavigateBack: () -> Unit,
-    onEditMeasurement: () -> Unit
+    viewModel: MeasurementDetailViewModel,
+    onNavigateBack: () -> Unit
 ) {
-    val historyState by historyViewModel.uiState.collectAsState()
-    val measurementState by measurementViewModel.uiState.collectAsState()
-    val detailState by measurementViewModel.detailState.collectAsState()
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val measurement = uiState.measurement
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US) }
 
-    LaunchedEffect(historyState.exportContent) {
-        historyState.exportContent?.let { content ->
-            val names = historyState.exportedMeasurementNames
-            val safeBase = names.firstOrNull()
-                ?.replace(Regex("[^a-zA-Z0-9_-]"), "_")
-                ?.take(40) ?: "measurement"
-            val file = File(context.cacheDir, "${safeBase}_export.csv")
-            file.writeText(content)
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    LaunchedEffect(measurementId) {
+        viewModel.loadMeasurement(measurementId)
+    }
 
-            val subject = "Stream Measurement Report: ${names.firstOrNull() ?: ""}"
-            val body = buildString {
-                append("Please find attached the stream gauging measurement report")
-                names.firstOrNull()?.let { append(" for \"$it\"") }
-                append(".")
-                if (historyState.operatorName.isNotEmpty()) append("\n\nOperator: ${historyState.operatorName}")
-            }
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "message/rfc822"
-                if (historyState.userEmail.isNotEmpty()) {
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf(historyState.userEmail))
-                }
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, body)
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            try {
-                context.startActivity(Intent.createChooser(intent, "Send Report via Email"))
-            } catch (_: android.content.ActivityNotFoundException) { }
-            historyViewModel.clearExportContent()
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
         }
     }
 
-    val measurement = detailState.measurement
-    val segments = detailState.segments
-
-    LaunchedEffect(measurementId) {
-        measurementViewModel.loadMeasurementForEditing(measurementId)
+    val exportConfig = uiState.exportContent?.let { content ->
+        ExportShareConfig(
+            content = content,
+            measurementNames = uiState.exportedMeasurementNames,
+            userEmail = uiState.userEmail,
+            operatorName = uiState.operatorName
+        )
     }
-
-    val unit = measurementState.preferredUnit
-    val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US)
+    ExportShareEffect(
+        config = exportConfig,
+        snackbarHostState = snackbarHostState,
+        onDone = { viewModel.clearExportContent() }
+    )
 
     var showEditMetadataDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
-                title = "Measurement Details",
+                title = stringResource(R.string.screen_measurement_details),
                 onNavigateBack = onNavigateBack,
                 actions = {
-                    IconButton(onClick = { measurement?.let { historyViewModel.exportMeasurement(it) } }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export")
+                    IconButton(onClick = { viewModel.exportMeasurement() }) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_export))
                     }
                     IconButton(onClick = { showEditMetadataDialog = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
                     }
-                    var showDeleteConfirmation by remember { mutableStateOf(false) }
-                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-                    }
-
-                    if (showDeleteConfirmation) {
-                        cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog(
-                            onDismiss = { showDeleteConfirmation = false },
-                            onConfirm = {
-                                measurement?.let {
-                                    historyViewModel.deleteMeasurement(it)
-                                    onNavigateBack()
-                                }
-                                showDeleteConfirmation = false
-                            },
-                            title = "Delete Measurement",
-                            message = "Are you sure you want to delete measurement \"${measurement?.name}\"?"
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.action_delete),
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
             )
         }
     ) { padding ->
-        if (measurement == null) {
+        if (uiState.isLoading || measurement == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -131,13 +98,12 @@ fun MeasurementDetailsScreen(
             Column(
                 modifier = Modifier
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(Dimens.paddingM)
                     .fillMaxSize()
             ) {
                 Text(
                     text = measurement.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineMedium
                 )
                 Text(
                     text = dateFormat.format(Date(measurement.measureTimestamp)),
@@ -145,56 +111,54 @@ fun MeasurementDetailsScreen(
                     color = MaterialTheme.colorScheme.outline
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.groupSpacing))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     SummaryStat(
-                        label = "Total Flow",
-                        value = UnitConverter.formatFlow(measurement.totalFlow ?: 0.0, unit, decimals = 3)
+                        label = stringResource(R.string.label_total_flow),
+                        value = UnitConverter.formatFlow(measurement.totalFlow ?: 0.0, uiState.preferredUnit, decimals = 3)
                     )
                     SummaryStat(
-                        label = "Total Width",
-                        value = UnitConverter.formatLength(measurement.totalWidth ?: 0.0, unit)
+                        label = stringResource(R.string.label_total_width),
+                        value = UnitConverter.formatLength(measurement.totalWidth ?: 0.0, uiState.preferredUnit)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 if (measurement.gpsLat != null && measurement.gpsLong != null) {
+                    Spacer(modifier = Modifier.height(Dimens.paddingM))
                     Text(
-                        text = "Location: ${String.format(Locale.US, "%.5f, %.5f", measurement.gpsLat, measurement.gpsLong)}",
+                        text = stringResource(R.string.label_location, measurement.gpsLat, measurement.gpsLong),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
 
                 if (!measurement.note.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Note", style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(Dimens.paddingM))
+                    Text(text = stringResource(R.string.label_note), style = MaterialTheme.typography.titleSmall)
                     Text(text = measurement.note, style = MaterialTheme.typography.bodyMedium)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.groupSpacing))
 
                 Text(
-                    text = "Segments",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.label_segments),
+                    style = MaterialTheme.typography.titleMedium
                 )
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+                    verticalArrangement = Arrangement.spacedBy(Dimens.itemSpacing),
+                    contentPadding = PaddingValues(top = Dimens.paddingS, bottom = Dimens.paddingM)
                 ) {
-                    items(segments, key = { it.id }) { segment ->
+                    items(uiState.segments, key = { it.id }) { segment ->
                         SegmentSummaryItem(
                             segment = segment,
-                            unit = measurementState.preferredUnit,
-                            onClick = { measurementViewModel.startEditingSegment(segment) }
+                            unit = uiState.preferredUnit,
+                            onClick = { viewModel.startEditingSegment(segment) }
                         )
                     }
                 }
@@ -202,15 +166,15 @@ fun MeasurementDetailsScreen(
         }
     }
 
-    measurementState.editingSegment?.let { segment ->
+    uiState.editingSegment?.let { segment ->
         EditSegmentDialog(
             segment = segment,
-            points = measurementState.editingPoints,
-            unit = measurementState.preferredUnit,
-            onDismiss = { measurementViewModel.stopEditingSegment() },
+            points = uiState.editingPoints,
+            unit = uiState.preferredUnit,
+            onDismiss = { viewModel.stopEditingSegment() },
             onSave = { updatedSegment, points ->
-                measurementViewModel.updateSegmentDimensions(updatedSegment, points)
-                measurementViewModel.stopEditingSegment()
+                viewModel.updateSegmentDimensions(updatedSegment, points)
+                viewModel.stopEditingSegment()
             }
         )
     }
@@ -220,8 +184,20 @@ fun MeasurementDetailsScreen(
             measurement = measurement,
             onDismiss = { showEditMetadataDialog = false },
             onSave = { name, note ->
-                measurementViewModel.updateMeasurementMetadata(name, note)
+                viewModel.updateMetadata(name, note)
                 showEditMetadataDialog = false
+            }
+        )
+    }
+
+    if (showDeleteDialog && measurement != null) {
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.dialog_delete_title),
+            message = stringResource(R.string.dialog_delete_message, measurement.name),
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                showDeleteDialog = false
+                viewModel.deleteMeasurement { onNavigateBack() }
             }
         )
     }
@@ -230,7 +206,14 @@ fun MeasurementDetailsScreen(
 @Composable
 private fun SummaryStat(label: String, value: String) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge
+        )
     }
 }

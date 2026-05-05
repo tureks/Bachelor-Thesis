@@ -19,10 +19,15 @@ import kotlinx.coroutines.launch
 
 private const val PAGE_SIZE = 6
 
+data class DateRange(val from: Long? = null, val to: Long? = null) {
+    val isActive: Boolean get() = from != null
+}
+
 data class HistoryUiState(
     val measurements: List<StreamMeasurement> = emptyList(),
     val hasMore: Boolean = false,
     val searchQuery: String = "",
+    val dateRange: DateRange = DateRange(),
     val selectedIds: Set<Int> = emptySet(),
     val isExporting: Boolean = false,
     val exportContent: String? = null,
@@ -41,7 +46,15 @@ class HistoryViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    private data class SearchParams(val query: String, val dateRange: DateRange)
+    private data class ExportMeta(
+        val names: List<String> = emptyList(),
+        val userEmail: String = "",
+        val operatorName: String = ""
+    )
+
     private val _searchQuery = MutableStateFlow("")
+    private val _dateRange = MutableStateFlow(DateRange())
     private val _displayCount = MutableStateFlow(PAGE_SIZE)
     private val _selectedIds = MutableStateFlow<Set<Int>>(emptySet())
     private val _isExporting = MutableStateFlow(false)
@@ -49,43 +62,44 @@ class HistoryViewModel(
     private val _exportMeta = MutableStateFlow(ExportMeta())
     private val _error = MutableStateFlow<String?>(null)
 
-    private data class ExportMeta(
-        val names: List<String> = emptyList(),
-        val userEmail: String = "",
-        val operatorName: String = ""
-    )
-
     private val allMeasurementsFlow: Flow<List<StreamMeasurement>> =
-        _searchQuery.flatMapLatest { query -> searchMeasurementsUseCase(query) }
+        combine(_searchQuery, _dateRange) { query, range -> SearchParams(query, range) }
+            .flatMapLatest { params ->
+                searchMeasurementsUseCase(
+                    query = params.query,
+                    fromTimestamp = params.dateRange.from,
+                    toTimestamp = params.dateRange.to
+                )
+            }
 
     val uiState: StateFlow<HistoryUiState> = combine(
         allMeasurementsFlow,
-        _searchQuery,
-        _displayCount,
-        _selectedIds,
-        _isExporting,
-        _exportContent,
-        _exportMeta,
-        _error,
-        userRepository.userProfile.map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }.onStart { emit(MeasurementUnit.HYDROMETRIC) }
-    ) { args: Array<Any?> ->
-        val all = args[0] as List<StreamMeasurement>
-        val query = args[1] as String
-        val displayCount = args[2] as Int
-        val meta = args[6] as ExportMeta
-        @Suppress("UNCHECKED_CAST")
+        combine(_searchQuery, _dateRange, _displayCount) { q, d, c -> Triple(q, d, c) },
+        combine(_selectedIds, _isExporting, _exportContent, _exportMeta, _error) { a, b, c, d, e ->
+            object {
+                val selectedIds = a; val isExporting = b; val exportContent = c
+                val exportMeta = d; val error = e
+            }
+        },
+        userRepository.userProfile
+            .map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }
+            .onStart { emit(MeasurementUnit.HYDROMETRIC) }
+    ) { all, search, extra, unit ->
+        val (query, dateRange, displayCount) = search
+        val isFiltered = query.isNotBlank() || dateRange.isActive
         HistoryUiState(
-            measurements = if (query.isBlank()) all.take(displayCount) else all,
-            hasMore = query.isBlank() && all.size > displayCount,
+            measurements = if (isFiltered) all else all.take(displayCount),
+            hasMore = !isFiltered && all.size > displayCount,
             searchQuery = query,
-            selectedIds = args[3] as Set<Int>,
-            isExporting = args[4] as Boolean,
-            exportContent = args[5] as String?,
-            exportedMeasurementNames = meta.names,
-            userEmail = meta.userEmail,
-            operatorName = meta.operatorName,
-            preferredUnit = args[8] as MeasurementUnit,
-            error = args[7] as String?
+            dateRange = dateRange,
+            selectedIds = extra.selectedIds,
+            isExporting = extra.isExporting,
+            exportContent = extra.exportContent,
+            exportedMeasurementNames = extra.exportMeta.names,
+            userEmail = extra.exportMeta.userEmail,
+            operatorName = extra.exportMeta.operatorName,
+            preferredUnit = unit,
+            error = extra.error
         )
     }.stateIn(
         scope = viewModelScope,
@@ -95,6 +109,16 @@ class HistoryViewModel(
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+        _displayCount.value = PAGE_SIZE
+    }
+
+    fun setFromDate(from: Long?) {
+        _dateRange.value = DateRange(from = from, to = null)
+        _displayCount.value = PAGE_SIZE
+    }
+
+    fun clearDateRange() {
+        _dateRange.value = DateRange()
         _displayCount.value = PAGE_SIZE
     }
 

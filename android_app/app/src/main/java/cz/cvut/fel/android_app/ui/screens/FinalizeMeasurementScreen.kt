@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
@@ -85,24 +84,21 @@ fun FinalizeMeasurementScreen(
                             Text("Total Flow", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
                                 text = UnitConverter.formatFlow(totals.totalFlow, unit, decimals = 3),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleMedium
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Total Width", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
                                 text = UnitConverter.formatLength(totals.totalWidth, unit),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleSmall
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Max Depth", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                             Text(
                                 text = UnitConverter.formatLength(totals.maxDepth, unit),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleSmall
                             )
                         }
                     }

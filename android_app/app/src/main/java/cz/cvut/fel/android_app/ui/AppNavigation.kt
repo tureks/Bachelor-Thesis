@@ -27,6 +27,7 @@ import cz.cvut.fel.android_app.ui.screens.ReviewSegmentsScreen
 import cz.cvut.fel.android_app.ui.screens.SettingsScreen
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementDetailViewModel
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
 import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
@@ -42,7 +43,8 @@ fun AppNavigation(
     measurementViewModel: StreamMeasurementViewModel,
     deviceViewModel: DeviceViewModel,
     historyViewModel: HistoryViewModel,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    measurementDetailViewModel: MeasurementDetailViewModel
 ) {
     val navigateToMain: () -> Unit = {
         navController.navigate(Screen.Main.route) {
@@ -57,17 +59,17 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = Screen.Main.route,
-            enterTransition = { 
-                fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { it } 
+            enterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { it }
             },
-            exitTransition = { 
-                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { -it / 3 } 
+            exitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { -it / 3 }
             },
-            popEnterTransition = { 
-                fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { -it } 
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideInHorizontally(animationSpec = tween(300)) { -it }
             },
-            popExitTransition = { 
-                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { it / 3 } 
+            popExitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(animationSpec = tween(300)) { it / 3 }
             }
         ) {
             composable(Screen.Main.route) {
@@ -153,11 +155,8 @@ fun AppNavigation(
                 val id = backStackEntry.arguments?.getInt("measurementId") ?: return@composable
                 MeasurementDetailsScreen(
                     measurementId = id,
-                    historyViewModel = historyViewModel,
-                    measurementViewModel = measurementViewModel,
-                    onNavigateBack = { navController.safePopBackStack() },
-                    onEditMeasurement = {
-                    }
+                    viewModel = measurementDetailViewModel,
+                    onNavigateBack = { navController.safePopBackStack() }
                 )
             }
             composable(Screen.Settings.route) {

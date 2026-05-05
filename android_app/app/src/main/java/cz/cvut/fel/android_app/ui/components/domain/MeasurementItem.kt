@@ -69,7 +69,6 @@ fun MeasurementItem(
                     Text(
                         text = measurement.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
                     )
                     if (measurement.gpsLat != null) {

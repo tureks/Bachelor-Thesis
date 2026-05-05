@@ -1,5 +1,6 @@
 package cz.cvut.fel.android_app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,9 @@ fun ReviewSegmentsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
     val unit = uiState.preferredUnit
+
+    // System back button follows the same logic as the top-bar back button
+    BackHandler { onNavigateBack() }
 
     Scaffold(
         topBar = {

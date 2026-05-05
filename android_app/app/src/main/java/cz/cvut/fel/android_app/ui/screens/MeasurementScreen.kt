@@ -1,5 +1,6 @@
 package cz.cvut.fel.android_app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +35,9 @@ fun MeasurementScreen(
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+
+    // System back button follows the same logic as the top-bar back button
+    BackHandler { onNavigateBack() }
 
     val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
 

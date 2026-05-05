@@ -1,6 +1,6 @@
 package cz.cvut.fel.android_app.domain.model
 
-data class User(
+data class UserProfile(
     val firstName: String,
     val lastName: String,
     val email: String,

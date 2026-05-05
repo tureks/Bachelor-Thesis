@@ -1,6 +1,7 @@
 package cz.cvut.fel.android_app.domain
 
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
+import cz.cvut.fel.android_app.domain.model.UserProfile
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
 import kotlinx.coroutines.flow.first
@@ -17,16 +18,16 @@ class ExportStreamMeasurementUseCase(
      * Respects user's preferred measurement units (Metric or Hydrometric).
      */
     suspend operator fun invoke(measurementIds: List<Int>): String {
-        val user = userRepository.user.first()
-        val unit = user?.preferredUnit ?: MeasurementUnit.HYDROMETRIC
+        val profile = userRepository.userProfile.first()
+        val unit = profile?.preferredUnit ?: MeasurementUnit.HYDROMETRIC
         val sb = StringBuilder()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
-        // 1. User Info / Header
+        // 1. Operator Info / Header
         sb.append("\"PROPERTY\",\"VALUE\"\n")
         sb.append("\"Report Type\",\"Stream Gauging Measurement Report\"\n")
         sb.append("\"Export Date\",\"${dateFormat.format(Date())}\"\n")
-        user?.let {
+        profile?.let {
             sb.append("\"Operator\",\"${it.firstName} ${it.lastName}\"\n")
             sb.append("\"Contact\",\"${it.email}\"\n")
         }

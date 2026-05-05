@@ -36,7 +36,7 @@ fun EditSegmentDialog(
         mutableStateOf(UnitConverter.metersToInput(segment.depth, unit))
     }
 
-    var localPoints by remember { mutableStateOf(points) }
+    var localPoints by remember(points) { mutableStateOf(points) }
     var pointToDelete by remember { mutableStateOf<VelocityPoint?>(null) }
 
     Dialog(

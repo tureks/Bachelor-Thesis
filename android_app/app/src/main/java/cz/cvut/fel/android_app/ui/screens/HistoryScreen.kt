@@ -5,31 +5,30 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import cz.cvut.fel.android_app.domain.model.StreamMeasurement
 import cz.cvut.fel.android_app.ui.components.base.AppSearchBar
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog
 import cz.cvut.fel.android_app.ui.components.domain.MeasurementItem
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
-    measurementViewModel: StreamMeasurementViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToDetails: (Int) -> Unit
 ) {
@@ -37,8 +36,21 @@ fun HistoryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
     val selectionMode = uiState.selectedIds.isNotEmpty()
+
+    // Load more when near bottom
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val total = listState.layoutInfo.totalItemsCount
+            uiState.hasMore && total > 0 && lastVisible >= total - 3
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) viewModel.loadMore()
+    }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
@@ -129,6 +141,7 @@ fun HistoryScreen(
             }
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -137,19 +150,28 @@ fun HistoryScreen(
                     val isSelected = uiState.selectedIds.contains(measurement.id)
                     MeasurementItem(
                         measurement = measurement,
+                        unit = uiState.preferredUnit,
                         isSelected = isSelected,
                         selectionMode = selectionMode,
                         onClick = {
-                            if (selectionMode) {
-                                viewModel.toggleSelection(measurement.id)
-                            } else {
-                                onNavigateToDetails(measurement.id)
-                            }
+                            if (selectionMode) viewModel.toggleSelection(measurement.id)
+                            else onNavigateToDetails(measurement.id)
                         },
-                        onLongClick = {
-                            viewModel.toggleSelection(measurement.id)
-                        }
+                        onLongClick = { viewModel.toggleSelection(measurement.id) }
                     )
+                }
+
+                if (uiState.hasMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
                 }
             }
         }

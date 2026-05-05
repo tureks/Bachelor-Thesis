@@ -8,13 +8,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cz.cvut.fel.android_app.App
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
-import cz.cvut.fel.android_app.domain.model.User
+import cz.cvut.fel.android_app.domain.model.UserProfile
 import cz.cvut.fel.android_app.domain.repository.UserRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class UserUiState(
-    val user: User? = null,
+    val profile: UserProfile? = null,
     val isLoading: Boolean = true
 )
 
@@ -26,42 +26,42 @@ class UserViewModel(
     val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
 
     init {
-        userRepository.user
-            .onEach { user ->
-                _uiState.update { it.copy(user = user, isLoading = false) }
+        userRepository.userProfile
+            .onEach { profile ->
+                _uiState.update { it.copy(profile = profile, isLoading = false) }
             }
             .launchIn(viewModelScope)
     }
 
     fun updatePreferredUnit(unit: MeasurementUnit) {
         viewModelScope.launch {
-            val base = _uiState.value.user ?: defaultUser()
-            userRepository.saveUser(base.copy(preferredUnit = unit))
+            val base = _uiState.value.profile ?: defaultProfile()
+            userRepository.saveUserProfile(base.copy(preferredUnit = unit))
         }
     }
 
     fun updateMeasurementMode(isMultipoint: Boolean) {
         viewModelScope.launch {
-            val base = _uiState.value.user ?: defaultUser()
-            userRepository.saveUser(base.copy(multipointMeasurement = isMultipoint))
+            val base = _uiState.value.profile ?: defaultProfile()
+            userRepository.saveUserProfile(base.copy(multipointMeasurement = isMultipoint))
         }
     }
 
     fun updateProfile(firstName: String, lastName: String, email: String) {
         viewModelScope.launch {
-            val base = _uiState.value.user ?: defaultUser()
-            userRepository.saveUser(base.copy(firstName = firstName, lastName = lastName, email = email))
+            val base = _uiState.value.profile ?: defaultProfile()
+            userRepository.saveUserProfile(base.copy(firstName = firstName, lastName = lastName, email = email))
         }
     }
 
     fun updateSinglePointHeight(height: Double) {
         viewModelScope.launch {
-            val base = _uiState.value.user ?: defaultUser()
-            userRepository.saveUser(base.copy(singlePointHeight = height))
+            val base = _uiState.value.profile ?: defaultProfile()
+            userRepository.saveUserProfile(base.copy(singlePointHeight = height))
         }
     }
 
-    private fun defaultUser() = User(
+    private fun defaultProfile() = UserProfile(
         firstName = "",
         lastName = "",
         email = "",

@@ -1,12 +1,10 @@
 package cz.cvut.fel.android_app.domain
 
-import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.model.ValidationResult
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
-import kotlinx.coroutines.flow.first
 
 class UpdateStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,

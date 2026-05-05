@@ -38,6 +38,7 @@ fun MeasurementDetailsScreen(
 ) {
     val historyState by historyViewModel.uiState.collectAsState()
     val measurementState by measurementViewModel.uiState.collectAsState()
+    val detailState by measurementViewModel.detailState.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(historyState.exportContent) {
@@ -75,26 +76,11 @@ fun MeasurementDetailsScreen(
         }
     }
 
-    val measurement = remember(measurementId, historyState.measurements, measurementState.measurement) {
-        if (measurementState.measurement?.id == measurementId) {
-            measurementState.measurement
-        } else {
-            historyState.measurements.find { it.id == measurementId }
-        }
-    }
-
-    val segments = remember(measurementId, measurementState.measurement, measurementState.segments) {
-        if (measurementState.measurement?.id == measurementId) {
-            measurementState.segments
-        } else {
-            emptyList() // We need to load them if they are not the current ones
-        }
-    }
+    val measurement = detailState.measurement
+    val segments = detailState.segments
 
     LaunchedEffect(measurementId) {
-        if (measurementState.measurement?.id != measurementId) {
-            measurementViewModel.loadMeasurementForEditing(measurementId)
-        }
+        measurementViewModel.loadMeasurementForEditing(measurementId)
     }
 
     val unit = measurementState.preferredUnit

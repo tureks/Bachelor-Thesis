@@ -140,7 +140,6 @@ fun AppNavigation(
             composable(Screen.History.route) {
                 HistoryScreen(
                     viewModel = historyViewModel,
-                    measurementViewModel = measurementViewModel,
                     onNavigateBack = { navController.safePopBackStack() },
                     onNavigateToDetails = { id ->
                         navController.navigate(Screen.MeasurementDetails.createRoute(id))

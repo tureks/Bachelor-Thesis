@@ -40,6 +40,7 @@ object UnitConverter {
 
     fun formatFlow(m3s: Double, unit: MeasurementUnit, decimals: Int = 2): String {
         val v = m3sToDisplay(m3s, unit)
-        return String.format(Locale.US, "%.${decimals}f ${flowLabel(unit)}", v)
+        val d = if (unit == MeasurementUnit.HYDROMETRIC) 1 else decimals
+        return String.format(Locale.US, "%.${d}f ${flowLabel(unit)}", v)
     }
 }

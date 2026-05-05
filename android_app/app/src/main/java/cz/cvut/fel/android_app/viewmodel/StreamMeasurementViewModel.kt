@@ -24,6 +24,11 @@ import kotlinx.coroutines.launch
 data class VelocityReading(val velocity: Double, val timestamp: Long)
 data class ManualVelocityPoint(val id: Long, val velocity: Double, val height: Double = 0.0)
 
+data class MeasurementDetailUiState(
+    val measurement: StreamMeasurement? = null,
+    val segments: List<StreamSegment> = emptyList()
+)
+
 data class StreamMeasurementUiState(
     val measurement: StreamMeasurement? = null,
     val segments: List<StreamSegment> = emptyList(),
@@ -73,6 +78,13 @@ class StreamMeasurementViewModel(
     private val _editingSegment = MutableStateFlow<StreamSegment?>(null)
     private val _editingPoints = MutableStateFlow<List<VelocityPoint>>(emptyList())
     private val _captureState = MutableStateFlow(CaptureState())
+    private val _detailMeasurement = MutableStateFlow<StreamMeasurement?>(null)
+    private val _detailSegments = MutableStateFlow<List<StreamSegment>>(emptyList())
+
+    val detailState: StateFlow<MeasurementDetailUiState> = combine(
+        _detailMeasurement, _detailSegments
+    ) { m, s -> MeasurementDetailUiState(m, s) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MeasurementDetailUiState())
 
     private data class CaptureState(
         val isCapturing: Boolean = false,
@@ -114,7 +126,7 @@ class StreamMeasurementViewModel(
         HardwareState(velocity, connection, battery, location)
     }
 
-    private val userUnitFlow: Flow<MeasurementUnit> = userRepository.user
+    private val userUnitFlow: Flow<MeasurementUnit> = userRepository.userProfile
         .map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }
         .onStart { emit(MeasurementUnit.HYDROMETRIC) }
         .distinctUntilChanged()
@@ -139,8 +151,8 @@ class StreamMeasurementViewModel(
     .onStart { emit(0.0) }
 
     init {
-        userRepository.user
-            .onEach { user -> _singlePointHeightPercent = (user?.singlePointHeight ?: 0.6) * 100.0 }
+        userRepository.userProfile
+            .onEach { profile -> _singlePointHeightPercent = (profile?.singlePointHeight ?: 0.6) * 100.0 }
             .launchIn(viewModelScope)
     }
 
@@ -257,25 +269,13 @@ class StreamMeasurementViewModel(
     fun loadMeasurementForEditing(measurementId: Int) {
         viewModelScope.launch {
             try {
-                // Clear current live session state before loading
                 _manualPoints.value = emptyList()
                 _currentWidth.value = ""
                 _currentDepth.value = ""
                 _editingSegment.value = null
-
-                measurementRepository.setAsDraft(measurementId)
-                
-                // If it doesn't have GPS, try to get it now "at once"
-                val draft = measurementRepository.getDraft()
-                if (draft != null && draft.gpsLat == null) {
-                    val location = locationRepository.getCurrentLocation()
-                    if (location != null) {
-                        measurementRepository.update(draft.copy(
-                            gpsLat = location.latitude,
-                            gpsLong = location.longitude
-                        ))
-                    }
-                }
+                val measurement = measurementRepository.getById(measurementId) ?: return@launch
+                _detailMeasurement.value = measurement
+                _detailSegments.value = measurementRepository.getSegments(measurementId)
             } catch (e: Exception) {
                 _error.value = "Failed to load measurement: ${e.message}"
             }
@@ -384,6 +384,10 @@ class StreamMeasurementViewModel(
                 val result = updateSegmentUseCase(segment, updatedPoints)
                 if (result is ValidationResult.Error) {
                     _error.value = result.message
+                } else {
+                    val measurementId = segment.measurementId
+                    _detailSegments.value = measurementRepository.getSegments(measurementId)
+                    _detailMeasurement.value = measurementRepository.getById(measurementId)
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -392,9 +396,10 @@ class StreamMeasurementViewModel(
     }
 
     fun updateMeasurementMetadata(name: String, note: String) {
-        val currentId = uiState.value.measurement?.id ?: return
+        val currentId = _detailMeasurement.value?.id ?: uiState.value.measurement?.id ?: return
         viewModelScope.launch {
             updateMeasurementUseCase(currentId, name, note)
+            _detailMeasurement.value = measurementRepository.getById(currentId)
         }
     }
 

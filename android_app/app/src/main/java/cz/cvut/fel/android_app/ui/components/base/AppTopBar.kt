@@ -50,15 +50,15 @@ fun AppTopBar(
 fun SegmentNumberBadge(number: Int, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(100.dp),
-        color = Color.Transparent,
-        border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outline),
-        modifier = modifier.size(36.dp)
+        color = MaterialTheme.colorScheme.primaryContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        modifier = modifier.size(44.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = number.toString(),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

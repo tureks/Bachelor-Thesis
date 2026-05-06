@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.model.StreamMeasurement
+import cz.cvut.fel.android_app.ui.theme.Dimens
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,14 +39,14 @@ fun MeasurementItem(
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         colors = if (isSelected)
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
         else
             CardDefaults.cardColors(),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 1.dp),
-        border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 2.dp),
+        border = if (isSelected) androidx.compose.foundation.BorderStroke(Dimens.borderThick, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = Dimens.cardPadding, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (selectionMode) {
@@ -55,7 +56,7 @@ fun MeasurementItem(
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     modifier = Modifier
                         .padding(end = 16.dp)
-                        .size(22.dp)
+                        .size(Dimens.iconSizeLarge)
                 )
             }
 
@@ -75,8 +76,8 @@ fun MeasurementItem(
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp)
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(Dimens.iconSizeMedium)
                         )
                     }
                 }
@@ -91,7 +92,7 @@ fun MeasurementItem(
 
                 measurement.totalFlow?.let { flow ->
                     Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -120,13 +121,13 @@ private fun StatCell(label: String, value: String, highlight: Boolean = false) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (highlight) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (highlight) FontWeight.ExtraBold else FontWeight.SemiBold,
             color = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }

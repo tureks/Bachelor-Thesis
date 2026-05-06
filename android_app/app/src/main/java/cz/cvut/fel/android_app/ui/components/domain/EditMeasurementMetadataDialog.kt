@@ -37,7 +37,7 @@ fun EditMeasurementMetadataDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onSave(name, note) },
                 enabled = name.isNotBlank()
             ) {

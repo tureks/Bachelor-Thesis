@@ -121,10 +121,9 @@ fun EditPointDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            heightInput.toDoubleOrNull()?.let {
-                                onUpdateHeight(it)
-                            }
-                        }
+                            heightInput.toDoubleOrNull()?.let { onUpdateHeight(it) }
+                        },
+                        enabled = heightInput.toDoubleOrNull() != null
                     ) {
                         Text("Save")
                     }

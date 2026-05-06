@@ -1,7 +1,7 @@
 #include "ble_control.h"
 #include <bluefruit.h>
 
-#define BLE_TIMEOUT_MS 30000
+#define BLE_TIMEOUT_MS 60000
 
 BLEBas battery_service;
 BLEService flow_service(UUID_FLOW_SERVICE);
@@ -10,6 +10,8 @@ BLECharacteristic velocity_char(UUID_VELOCITY_CHAR, BLENotify, 20);
 static bool ble_enabled = false;
 static bool ble_advertising = false;
 static uint32_t ble_disconnect_time = 0;
+
+uint8_t (*battery_callback)() = nullptr;
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
     ble_advertising = false;
@@ -27,11 +29,16 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
 void connect_callback(uint16_t conn_handle) {
     ble_advertising = false;
     Serial.println("Connected!");
+    delay(200);
+    if (battery_callback != nullptr) {
+        uint8_t pct = battery_callback();
+        battery_service.write(pct);
+        battery_service.notify(pct);
+    }
 }
 
 void adv_stop_callback() {
     ble_advertising = false;
-    ble_disconnect_time = millis();
     Serial.println("Advertising stopped");
 }
 
@@ -89,6 +96,18 @@ void ble_loop() {
     }
 }
 
+void ble_shutdown() {
+    if (!ble_enabled) return; 
+    if (Bluefruit.connected()) {
+        Bluefruit.disconnect(Bluefruit.connHandle());
+        delay(100);
+    }
+    ble_stop_advertising();
+    ble_enabled = false;
+    ble_advertising = false;
+    Serial.println("BLE shut down");
+}
+
 void ble_start_advertising() {
     if (!ble_enabled) {
         ble_enabled = true;
@@ -108,7 +127,6 @@ void ble_stop_advertising() {
     if (ble_advertising) {
         Bluefruit.Advertising.stop();
         ble_advertising = false;
-        ble_disconnect_time = millis();
         Serial.println("Advertising stopped by user");
     }
 }
@@ -123,14 +141,9 @@ void ble_send_velocity(float velocity) {
 }
 
 void ble_send_battery(uint8_t percent) {
-    battery_service.write(percent);
-}
-
-void ble_enable() {
-    if (!ble_enabled) {
-        ble_enabled = true;
-        ble_disconnect_time = millis();
-        Serial.println("BLE enabled");
+    if (Bluefruit.connected()) {
+        battery_service.write(percent);
+        battery_service.notify(percent);
     }
 }
 

@@ -1,9 +1,7 @@
 package cz.cvut.fel.android_app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
@@ -14,8 +12,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
-import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
 import java.util.Locale
 
@@ -73,7 +72,7 @@ fun FinalizeMeasurementScreen(
             if (totals != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Row(
@@ -81,21 +80,21 @@ fun FinalizeMeasurementScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Total Flow", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            Text("Total Flow", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = UnitConverter.formatFlow(totals.totalFlow, unit, decimals = 3),
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Total Width", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            Text("Total Width", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = UnitConverter.formatLength(totals.totalWidth, unit),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Max Depth", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            Text("Max Depth", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = UnitConverter.formatLength(totals.maxDepth, unit),
                                 style = MaterialTheme.typography.titleSmall
@@ -111,9 +110,9 @@ fun FinalizeMeasurementScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = if (location != null)
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        MaterialTheme.colorScheme.secondaryContainer
                     else
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Row(
@@ -129,8 +128,8 @@ fun FinalizeMeasurementScreen(
                         tint = if (location != null)
                             MaterialTheme.colorScheme.secondary
                         else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
                     )
                     if (location != null) {
                         Column {
@@ -147,14 +146,14 @@ fun FinalizeMeasurementScreen(
                             Text(
                                 text = String.format(Locale.US, "±%.0f m accuracy", location.accuracy),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
                     } else {
                         Text(
                             text = "Location unavailable",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -182,34 +181,17 @@ fun FinalizeMeasurementScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Surface(
+            Button(
                 onClick = {
-                    if (isNameValid) {
-                        viewModel.finalizeMeasurement(name, note)
-                        onComplete()
-                    }
+                    viewModel.finalizeMeasurement(name, note)
+                    onComplete()
                 },
-                shape = RoundedCornerShape(12.dp),
-                color = if (isNameValid) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant,
-                shadowElevation = 4.dp,
-                border = BorderStroke(0.3.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 enabled = isNameValid
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(
-                        text = "Save Measurement",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isNameValid) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    )
-                }
+                Text(text = "Save Measurement", style = MaterialTheme.typography.labelLarge)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -217,18 +199,11 @@ fun FinalizeMeasurementScreen(
     }
 
     if (showCancelDialog) {
-        AlertDialog(
-            onDismissRequest = { showCancelDialog = false },
-            title = { Text("Cancel Measurement") },
-            text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.cancelMeasurement()
-                    onNavigateToMain()
-                }) { Text("Yes") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) { Text("No") }
+        CancelMeasurementDialog(
+            onDismiss = { showCancelDialog = false },
+            onConfirm = {
+                viewModel.cancelMeasurement()
+                onNavigateToMain()
             }
         )
     }

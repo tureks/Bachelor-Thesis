@@ -27,13 +27,13 @@ fun ManualPointItem(
             .fillMaxWidth()
             .clickable { onEdit() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -41,7 +41,7 @@ fun ManualPointItem(
                 Text(
                     text = String.format(Locale.US, "%.2f m/s", point.velocity),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = depthLabel,
@@ -53,8 +53,8 @@ fun ManualPointItem(
                 Icon(
                     Icons.Default.Edit,
                     contentDescription = "Edit point",
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }

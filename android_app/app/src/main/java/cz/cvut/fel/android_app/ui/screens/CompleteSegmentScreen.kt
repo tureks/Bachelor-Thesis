@@ -186,7 +186,7 @@ fun CompleteSegmentScreen(
                     .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Button(
+                OutlinedButton(
                     onClick = {
                         viewModel.completeSegment(
                             width.toDoubleOrNull() ?: 0.0,
@@ -199,11 +199,7 @@ fun CompleteSegmentScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -217,14 +213,12 @@ fun CompleteSegmentScreen(
 
                 Button(
                     onClick = {
-                        if (isValid) {
-                            viewModel.completeSegment(
-                                width.toDoubleOrNull() ?: 0.0,
-                                depth.toDoubleOrNull() ?: 0.0,
-                                selectedPointIds
-                            )
-                            onNavigateToMeasurement()
-                        }
+                        viewModel.completeSegment(
+                            width.toDoubleOrNull() ?: 0.0,
+                            depth.toDoubleOrNull() ?: 0.0,
+                            selectedPointIds
+                        )
+                        onNavigateToMeasurement()
                     },
                     enabled = isValid,
                     modifier = Modifier

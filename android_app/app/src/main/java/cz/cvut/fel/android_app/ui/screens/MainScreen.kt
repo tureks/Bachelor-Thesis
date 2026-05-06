@@ -147,16 +147,19 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = { showOverwriteDialog = false },
             title = { Text("New Measurement") },
-            text = { Text("Starting a new measurement will delete the previous one. Do you want to continue?") },
+            text = { Text("Starting a new measurement will discard the current unsaved data. Do you want to continue?") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.startNewMeasurement()
-                    onNavigateToMeasurement()
-                    showOverwriteDialog = false
-                }) { Text("Yes") }
+                TextButton(
+                    onClick = {
+                        viewModel.startNewMeasurement()
+                        onNavigateToMeasurement()
+                        showOverwriteDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Discard & Start New") }
             },
             dismissButton = {
-                TextButton(onClick = { showOverwriteDialog = false }) { Text("No") }
+                TextButton(onClick = { showOverwriteDialog = false }) { Text("Keep") }
             }
         )
     }

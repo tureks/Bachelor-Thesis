@@ -70,8 +70,8 @@ fun ReviewSegmentsScreen(
                 )
                 Text(
                     text = "Total Stream Flow",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

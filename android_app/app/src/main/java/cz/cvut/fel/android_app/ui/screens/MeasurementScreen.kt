@@ -91,8 +91,8 @@ fun MeasurementScreen(
                 )
                 Text(
                     text = "Live Average",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -103,25 +103,25 @@ fun MeasurementScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = String.format(Locale.US, "%.2f m/s", uiState.windowMin ?: 0.0),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Min",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = String.format(Locale.US, "%.2f m/s", uiState.windowMax ?: 0.0),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Max",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -131,7 +131,7 @@ fun MeasurementScreen(
 
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                border = CardDefaults.outlinedCardBorder(enabled = true).copy(width = 0.5.dp)
+                border = CardDefaults.outlinedCardBorder(enabled = true)
             ) {
                 VelocityGraph(
                     readings = uiState.recentReadings,

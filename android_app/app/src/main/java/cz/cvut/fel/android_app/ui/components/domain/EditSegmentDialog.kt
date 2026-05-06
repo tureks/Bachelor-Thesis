@@ -124,14 +124,11 @@ fun EditSegmentDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val wInput = widthInput.toDoubleOrNull()
-                            val dInput = depthInput.toDoubleOrNull()
-
-                            val w = if (wInput != null) UnitConverter.displayToMeters(wInput, unit) else segment.segmentWidth
-                            val d = if (dInput != null) UnitConverter.displayToMeters(dInput, unit) else segment.depth
-
+                            val w = UnitConverter.displayToMeters(widthInput.toDouble(), unit)
+                            val d = UnitConverter.displayToMeters(depthInput.toDouble(), unit)
                             onSave(segment.copy(segmentWidth = w, depth = d), localPoints)
-                        }
+                        },
+                        enabled = widthInput.toDoubleOrNull() != null && depthInput.toDoubleOrNull() != null
                     ) {
                         Text("Save Changes")
                     }

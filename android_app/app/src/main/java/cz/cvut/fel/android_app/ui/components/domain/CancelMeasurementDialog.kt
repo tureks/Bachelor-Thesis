@@ -13,10 +13,13 @@ fun CancelMeasurementDialog(
         title = { Text("Cancel Measurement") },
         text = { Text("Are you sure you want to cancel this measurement? All captured data will be lost.") },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Yes") }
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) { Text("Discard") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("No") }
+            TextButton(onClick = onDismiss) { Text("Keep Going") }
         }
     )
 }

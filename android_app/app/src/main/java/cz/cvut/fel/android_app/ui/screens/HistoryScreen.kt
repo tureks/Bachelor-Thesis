@@ -21,13 +21,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import cz.cvut.fel.android_app.R
-import cz.cvut.fel.android_app.domain.model.StreamMeasurement
 import cz.cvut.fel.android_app.ui.components.ExportShareConfig
 import cz.cvut.fel.android_app.ui.components.ExportShareEffect
 import cz.cvut.fel.android_app.ui.components.base.AppSearchBar
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.FromDatePickerDialog
-import cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog
 import cz.cvut.fel.android_app.ui.components.domain.MeasurementItem
 import cz.cvut.fel.android_app.ui.theme.Dimens
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
@@ -82,7 +80,6 @@ fun HistoryScreen(
     )
 
     var showDatePicker by remember { mutableStateOf(false) }
-    var measurementToDelete by remember { mutableStateOf<StreamMeasurement?>(null) }
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
@@ -127,6 +124,14 @@ fun HistoryScreen(
                     onPickerOpen = { showDatePicker = true },
                     onClear = { viewModel.clearDateRange() }
                 )
+                if (uiState.measurements.isNotEmpty()) {
+                    Text(
+                        text = "Long-press to select for export",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = Dimens.paddingM, vertical = Dimens.paddingXs)
+                    )
+                }
             }
 
             if (uiState.measurements.isEmpty() && !uiState.hasMore) {
@@ -184,17 +189,6 @@ fun HistoryScreen(
         )
     }
 
-    measurementToDelete?.let { m ->
-        DeleteConfirmationDialog(
-            title = stringResource(R.string.dialog_delete_title),
-            message = stringResource(R.string.dialog_delete_message, m.name),
-            onDismiss = { measurementToDelete = null },
-            onConfirm = {
-                viewModel.deleteMeasurement(m)
-                measurementToDelete = null
-            }
-        )
-    }
 }
 
 @Composable

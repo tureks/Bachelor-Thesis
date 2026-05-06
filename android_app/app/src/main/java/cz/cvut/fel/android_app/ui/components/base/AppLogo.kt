@@ -15,11 +15,11 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-// Colors from the "forest" palette in logo-mark.jsx
-private val TreeColor = Color(0xFF1F3A2C)
-private val TreeDeepColor = Color(0xFF0F2418)
-private val WaterColor = Color(0xFF3A7EA3)
-private val WaterDeepColor = Color(0xFF1F5476)
+// Colors — slate-blue silhouette trees, bright sky-blue water
+private val TreeColor = Color(0xFF1E2D40)
+private val TreeDeepColor = Color(0xFF111827)
+private val WaterColor = Color(0xFF38BDF8)
+private val WaterDeepColor = Color(0xFF0284C7)
 
 @Composable
 fun AppLogo(modifier: Modifier = Modifier) {

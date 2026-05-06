@@ -108,7 +108,7 @@ fun MeasurementDetailsScreen(
                 Text(
                     text = dateFormat.format(Date(measurement.measureTimestamp)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(Dimens.groupSpacing))
@@ -132,7 +132,7 @@ fun MeasurementDetailsScreen(
                     Text(
                         text = stringResource(R.string.label_location, measurement.gpsLat, measurement.gpsLong),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -208,8 +208,8 @@ private fun SummaryStat(label: String, value: String) {
     Column {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,

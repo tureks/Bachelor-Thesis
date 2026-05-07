@@ -106,6 +106,28 @@ fun DeviceScreen(
                             )
                         }
                     }
+                    
+                    val scannedAddresses = uiState.scannedDevices.map { it.macAddress }.toSet()
+                    val knownOnly = uiState.knownDevices
+                        .filter { it.macAddress !in scannedAddresses }
+                        .sortedByDescending { it.lastConnected }
+                    if (knownOnly.isNotEmpty()) {
+                        item {
+                            Text(
+                                "Previously Connected",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        items(knownOnly, key = { "known_${it.macAddress}" }) { device ->
+                            DeviceItem(
+                                name = device.name,
+                                address = device.macAddress,
+                                connectionStatus = connectionStatus(device, uiState),
+                                onClick = { viewModel.toggleConnection(device) }
+                            )
+                        }
+                        item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+                    }
 
                     // Scan header
                     item {
@@ -165,7 +187,6 @@ fun DeviceScreen(
                         }
                     }
 
-                    // Scanned devices
                     items(uiState.scannedDevices, key = { it.macAddress }) { device ->
                         DeviceItem(
                             name = device.name,
@@ -173,30 +194,6 @@ fun DeviceScreen(
                             connectionStatus = connectionStatus(device, uiState),
                             onClick = { viewModel.toggleConnection(device) }
                         )
-                    }
-
-                    // Previously connected devices (not currently visible in scan)
-                    val scannedAddresses = uiState.scannedDevices.map { it.macAddress }.toSet()
-                    val knownOnly = uiState.knownDevices.filter { it.macAddress !in scannedAddresses }
-                    if (knownOnly.isNotEmpty()) {
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                HorizontalDivider()
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Previously Connected",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
-                        }
-                        items(knownOnly, key = { "known_${it.macAddress}" }) { device ->
-                            DeviceItem(
-                                name = device.name,
-                                address = device.macAddress,
-                                connectionStatus = connectionStatus(device, uiState),
-                                onClick = { viewModel.toggleConnection(device) }
-                            )
-                        }
                     }
                 }
             }

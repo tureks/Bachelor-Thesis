@@ -8,6 +8,7 @@ interface BleRepository {
     val connectionState: Flow<BleConnectionState>
     val velocityReadings: Flow<Double>
     val batteryLevel: Flow<Int>
+    val probeConnected: Flow<Boolean>
     val scannedDevices: Flow<List<Device>>
 
     fun startScanning()

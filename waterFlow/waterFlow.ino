@@ -2,6 +2,7 @@
 #include <Adafruit_TinyUSB.h>
 #include <nrf_wdt.h>
 
+#define DEVICE_PIN D7
 #define SIGNAL_PIN D8
 #define BUTTON_PIN D9
 #define LONG_PRESS_MS 1000
@@ -14,6 +15,7 @@ volatile uint32_t first_pulse_time = 0;
 volatile bool new_rotation = false;
 
 static float last_velocity = 0;
+static uint32_t last_status_time = 0;
 static uint32_t last_send_time = 0;
 static uint32_t last_battery_time = 0;
 static uint32_t last_pulse_time = 0;
@@ -34,6 +36,10 @@ void go_to_deep_sleep() {
 
     NRF_POWER->SYSTEMOFF = 1;
     while (1);  
+}
+
+bool is_device_connected() {
+    return digitalRead(DEVICE_PIN) == LOW; 
 }
 
 void check_button() {
@@ -141,11 +147,13 @@ void setup() {
     Serial.begin(115200);
     delay(500);
 
-    battery_callback = read_battery_percent;
-    read_battery_percent();
-
     pinMode(SIGNAL_PIN, INPUT);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(DEVICE_PIN, INPUT_PULLUP);
+
+    battery_callback = read_battery_percent;
+    status_callback = is_device_connected;
+    read_battery_percent();
 
     attachInterrupt(digitalPinToInterrupt(SIGNAL_PIN), on_falling_edge, FALLING);
 
@@ -194,6 +202,12 @@ void loop() {
     if (millis() - last_battery_time >= 30000) {
         last_battery_time = millis();
         ble_send_battery(read_battery_percent());
+    }
+
+    if (millis() - last_status_time >= 1000) {
+        last_status_time = millis();
+        bool probe = is_device_connected();
+        ble_send_status(probe);
     }
 
     delay(1);

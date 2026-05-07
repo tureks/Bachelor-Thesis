@@ -6,8 +6,10 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +37,7 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isConnected = uiState.connectionState is BleConnectionState.Connected
+    val isProbeConnected = uiState.probeConnected
     var showOverwriteDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -56,6 +59,18 @@ fun MainScreen(
                     }
                 },
                 actions = {
+                    if (isConnected) {
+                        Icon(
+                            imageVector = if (isProbeConnected) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            contentDescription = if (isProbeConnected) "Probe connected" else "Probe not connected",
+                            tint = if (isProbeConnected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
                     TextButton(
                         onClick = onNavigateToDevice,
                         modifier = Modifier.padding(end = 8.dp)
@@ -80,66 +95,107 @@ fun MainScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Column(
+            // Alert banner pinned to top
+            if (!isConnected) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                        Text(
+                            "Connect a device to start measuring",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            } else if (!isProbeConnected) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                        Text(
+                            "Connect probe to the measuring device",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            // Buttons centered in remaining space
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                contentAlignment = Alignment.Center
             ) {
-                AppButton(
-                    text = "New Measurement",
-                    icon = Icons.Default.Add,
-                    onClick = {
-                        if (uiState.measurement != null) {
-                            showOverwriteDialog = true
-                        } else {
-                            viewModel.startNewMeasurement()
-                            onNavigateToMeasurement()
-                        }
-                    }
-                )
-
-                if (uiState.measurement != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     AppButton(
-                        text = "Continue Measurement",
-                        icon = Icons.Default.PlayArrow,
-                        onClick = { onNavigateToMeasurement() }
+                        text = "New Measurement",
+                        icon = Icons.Default.Add,
+                        enabled = isConnected,
+                        onClick = {
+                            if (uiState.measurement != null) {
+                                showOverwriteDialog = true
+                            } else {
+                                viewModel.startNewMeasurement()
+                                onNavigateToMeasurement()
+                            }
+                        }
                     )
-                }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    if (uiState.measurement != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AppButton(
+                            text = "Continue Measurement",
+                            icon = Icons.Default.PlayArrow,
+                            enabled = isConnected,
+                            onClick = { onNavigateToMeasurement() }
+                        )
+                    }
 
-                if (!isConnected) {
+                    Spacer(modifier = Modifier.height(32.dp))
+
                     AppOutlinedButton(
-                        text = "Connect Device",
-                        icon = Icons.Default.Bluetooth,
-                        onClick = onNavigateToDevice
+                        text = "Measurement History",
+                        icon = Icons.AutoMirrored.Filled.List,
+                        onClick = onNavigateToHistory
                     )
+
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    AppOutlinedButton(
+                        text = "Settings",
+                        icon = Icons.Default.Settings,
+                        onClick = onNavigateToSettings
+                    )
                 }
-
-                AppOutlinedButton(
-                    text = "Measurement History",
-                    icon = Icons.AutoMirrored.Filled.List,
-                    onClick = onNavigateToHistory
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                AppOutlinedButton(
-                    text = "Settings",
-                    icon = Icons.Default.Settings,
-                    onClick = onNavigateToSettings
-                )
             }
-
         }
     }
 

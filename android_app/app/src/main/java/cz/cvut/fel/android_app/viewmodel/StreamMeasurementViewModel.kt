@@ -35,12 +35,14 @@ data class StreamMeasurementUiState(
     val currentLocation: Location? = null,
     val connectionState: BleConnectionState = BleConnectionState.Idle,
     val batteryLevel: Int = 0,
+    val probeConnected: Boolean = false,
     val timeWindow: Int = 10,
     val windowAverage: Double = 0.0,
     val windowMin: Double? = null,
     val windowMax: Double? = null,
     val recentReadings: List<VelocityReading> = emptyList(),
     val manualPoints: List<ManualVelocityPoint> = emptyList(),
+    val velocityOverLimit: Boolean = false,
     val currentWidth: String = "",
     val currentDepth: String = "",
     val editingSegment: StreamSegment? = null,
@@ -90,10 +92,11 @@ class StreamMeasurementViewModel(
         val velocity: Double,
         val connectionState: BleConnectionState,
         val batteryLevel: Int,
+        val probeConnected: Boolean,
         val currentLocation: Location?
     )
 
-    private val measurementDataFlow: Flow<MeasurementData> = 
+    private val measurementDataFlow: Flow<MeasurementData> =
         measurementRepository.getDraftFlow().flatMapLatest { draft ->
             if (draft != null) {
                 measurementRepository.getSegmentsFlow(draft.id).map { segments ->
@@ -109,9 +112,10 @@ class StreamMeasurementViewModel(
         bleRepository.velocityReadings.onStart { emit(0.0) },
         bleRepository.connectionState,
         bleRepository.batteryLevel,
+        bleRepository.probeConnected,
         locationRepository.observeLocation().onStart { emit(null) }
-    ) { velocity, connection, battery, location ->
-        HardwareState(velocity, connection, battery, location)
+    ) { velocity, connection, battery, probe, location ->
+        HardwareState(velocity, connection, battery, probe, location)
     }
 
     private val userUnitFlow: Flow<MeasurementUnit> = userRepository.userProfile
@@ -185,6 +189,7 @@ class StreamMeasurementViewModel(
             currentVelocity = hardware.velocity,
             connectionState = hardware.connectionState,
             batteryLevel = hardware.batteryLevel,
+            probeConnected = hardware.probeConnected,
             currentLocation = hardware.currentLocation,
             isCapturing = capture.isCapturing,
             captureProgress = capture.progress,
@@ -194,6 +199,7 @@ class StreamMeasurementViewModel(
             windowAverage = windowAvg,
             windowMin = validReadings.minOfOrNull { it.velocity } ?: 0.0,
             windowMax = validReadings.maxOfOrNull { it.velocity } ?: 0.0,
+            velocityOverLimit = hardware.velocity > VELOCITY_MAX,
             manualPoints = points,
             currentWidth = currentWidth,
             currentDepth = currentDepth,
@@ -239,7 +245,8 @@ class StreamMeasurementViewModel(
 
     fun addManualPoint() {
         val avg = uiState.value.windowAverage
-        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = _singlePointHeightPercent) }
+        val capped = minOf(avg, VELOCITY_MAX)
+        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), capped, height = _singlePointHeightPercent) }
     }
 
     fun updateManualPointHeight(id: Long, height: Double) {
@@ -398,6 +405,8 @@ class StreamMeasurementViewModel(
     }
 
     companion object {
+        const val VELOCITY_MAX = 5.0
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as App

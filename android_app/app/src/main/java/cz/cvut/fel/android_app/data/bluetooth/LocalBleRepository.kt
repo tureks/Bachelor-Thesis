@@ -48,21 +48,22 @@ class LocalBleRepository(
     private val _batteryLevel = MutableStateFlow<Int>(0)
     override val batteryLevel: Flow<Int> = _batteryLevel.asStateFlow()
 
+    private val _probeConnected = MutableStateFlow(false)
+    override val probeConnected: Flow<Boolean> = _probeConnected.asStateFlow()
+
     private val _scannedDevices = MutableStateFlow<List<Device>>(emptyList())
     override val scannedDevices: Flow<List<Device>> = _scannedDevices.asStateFlow()
+
+    private val subscribeQueue = ArrayDeque<Pair<UUID, UUID>>()
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
             val name = device.name ?: "Unknown Device"
             val address = device.address
-
             _scannedDevices.update { devices ->
-                if (devices.any { it.macAddress == address }) {
-                    devices
-                } else {
-                    devices + Device(name = name, macAddress = address, lastConnected = null)
-                }
+                if (devices.any { it.macAddress == address }) devices
+                else devices + Device(name = name, macAddress = address, lastConnected = null)
             }
         }
     }
@@ -90,6 +91,7 @@ class LocalBleRepository(
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     _connectionState.value = BleConnectionState.Disconnected
+                    _probeConnected.value = false
                     gatt.close()
                     this@LocalBleRepository.gatt = null
                 }
@@ -101,61 +103,72 @@ class LocalBleRepository(
                 _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
                 return
             }
-
-            val velocityChar = gatt.getService(SERVICE_UUID)?.getCharacteristic(VELOCITY_CHAR_UUID)
-            if (velocityChar != null) {
-                enableNotifications(gatt, velocityChar)
-            } else {
-                _connectionState.value = BleConnectionState.Error(BleException.ServicesNotSupported)
-                return
-            }
+            subscribeQueue.clear()
+            subscribeQueue.addLast(Pair(SERVICE_UUID, VELOCITY_CHAR_UUID))
+            subscribeQueue.addLast(Pair(BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHAR_UUID))
+            subscribeQueue.addLast(Pair(SERVICE_UUID, STATUS_CHAR_UUID))
+            subscribeNext(gatt)
         }
 
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             if (descriptor.uuid != CCCD_UUID) return
-            if (status != BluetoothGatt.GATT_SUCCESS) {
+
+            if (status != BluetoothGatt.GATT_SUCCESS && descriptor.characteristic.uuid == VELOCITY_CHAR_UUID) {
                 _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
                 return
             }
-
-            if (descriptor.characteristic.uuid == VELOCITY_CHAR_UUID) {
-                val batteryChar = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_CHAR_UUID)
-                if (batteryChar != null) {
-                    enableNotifications(gatt, batteryChar)
-                } else {
-                    finishConnection(gatt)
-                }
-            } else if (descriptor.characteristic.uuid == BATTERY_LEVEL_CHAR_UUID) {
-                finishConnection(gatt)
-            }
+            subscribeNext(gatt)
         }
 
         private fun finishConnection(gatt: BluetoothGatt) {
             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
             _connectionState.value = BleConnectionState.Connected(gatt.device.address)
-            
-            // Update last connected timestamp in DB or insert if new
+
+            val batteryChar = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_CHAR_UUID)
+            if (batteryChar != null) {
+                gatt.readCharacteristic(batteryChar)
+            } else {
+                gatt.getService(SERVICE_UUID)?.getCharacteristic(STATUS_CHAR_UUID)
+                    ?.let { gatt.readCharacteristic(it) }
+            }
+
             scope.launch {
                 val address = gatt.device.address
                 val name = gatt.device.name ?: "FlowMeter"
                 val knownDevices = deviceRepository.getAll().firstOrNull() ?: emptyList()
                 val existingDevice = knownDevices.find { it.macAddress == address }
-                
                 if (existingDevice != null) {
                     deviceRepository.updateLastConnected(existingDevice.id, System.currentTimeMillis())
                 } else {
-                    deviceRepository.insert(
-                        Device(
-                            name = name,
-                            macAddress = address,
-                            lastConnected = System.currentTimeMillis()
-                        )
-                    )
+                    deviceRepository.insert(Device(name = name, macAddress = address, lastConnected = System.currentTimeMillis()))
                 }
             }
         }
 
-        @Suppress("DEPRECATION", "OverridingDeprecatedMember")
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            handleCharacteristicRead(gatt, characteristic.uuid, characteristic.value)
+        }
+
+        override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) return
+            handleCharacteristicRead(gatt, characteristic.uuid, value)
+        }
+
+        private fun handleCharacteristicRead(gatt: BluetoothGatt, uuid: UUID, value: ByteArray) {
+            when (uuid) {
+                BATTERY_LEVEL_CHAR_UUID -> {
+                    parseAndEmitBattery(value)
+                    // Chain: after battery, read status
+                    gatt.getService(SERVICE_UUID)?.getCharacteristic(STATUS_CHAR_UUID)
+                        ?.let { gatt.readCharacteristic(it) }
+                }
+                STATUS_CHAR_UUID -> parseAndEmitStatus(value)
+            }
+        }
+
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             handleCharacteristicChanged(characteristic.uuid, characteristic.value)
         }
@@ -163,12 +176,43 @@ class LocalBleRepository(
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
             handleCharacteristicChanged(characteristic.uuid, value)
         }
+
+        private fun subscribeNext(gatt: BluetoothGatt) {
+            while (subscribeQueue.isNotEmpty()) {
+                val (serviceUuid, charUuid) = subscribeQueue.removeFirst()
+                val char = gatt.getService(serviceUuid)?.getCharacteristic(charUuid)
+                if (char == null) {
+                    if (charUuid == VELOCITY_CHAR_UUID) {
+                        _connectionState.value = BleConnectionState.Error(BleException.ServicesNotSupported)
+                        return
+                    }
+                    continue
+                }
+                if (tryEnableNotifications(gatt, char)) return
+            }
+            finishConnection(gatt)
+        }
+    }
+
+    private fun tryEnableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic): Boolean {
+        gatt.setCharacteristicNotification(characteristic, true)
+        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        } else {
+            @Suppress("DEPRECATION")
+            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            @Suppress("DEPRECATION")
+            gatt.writeDescriptor(descriptor)
+        }
+        return true
     }
 
     private fun handleCharacteristicChanged(uuid: UUID, value: ByteArray) {
         when (uuid) {
             VELOCITY_CHAR_UUID -> parseAndEmitVelocity(value)
             BATTERY_LEVEL_CHAR_UUID -> parseAndEmitBattery(value)
+            STATUS_CHAR_UUID -> parseAndEmitStatus(value)
         }
     }
 
@@ -194,38 +238,25 @@ class LocalBleRepository(
 
     override fun isBluetoothEnabled(): Boolean = bluetoothAdapter.isEnabled
 
-    private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        gatt.setCharacteristicNotification(characteristic, true)
-        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: run {
-            _connectionState.value = BleConnectionState.Error(BleException.HardwareError)
-            return
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-        } else {
-            @Suppress("DEPRECATION")
-            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            @Suppress("DEPRECATION")
-            gatt.writeDescriptor(descriptor)
-        }
-    }
-
     private fun parseAndEmitVelocity(bytes: ByteArray) {
         val value = bytes.toString(Charsets.UTF_8).trim().toDoubleOrNull() ?: return
-        scope.launch {
-            _velocityReadings.emit(value)
-        }
+        scope.launch { _velocityReadings.emit(value) }
     }
 
     private fun parseAndEmitBattery(bytes: ByteArray) {
         if (bytes.isEmpty()) return
-        val level = bytes[0].toInt() and 0xFF
-        _batteryLevel.value = level
+        _batteryLevel.value = bytes[0].toInt() and 0xFF
+    }
+
+    private fun parseAndEmitStatus(bytes: ByteArray) {
+        if (bytes.isEmpty()) return
+        _probeConnected.value = bytes[0].toInt() != 0
     }
 
     companion object {
         private val SERVICE_UUID: UUID = UUID.fromString("a177eaf2-c661-4f76-b07d-36826eca67bd")
         private val VELOCITY_CHAR_UUID: UUID = UUID.fromString("0f6866f4-8a14-43a9-b7e4-93075f456d5c")
+        private val STATUS_CHAR_UUID: UUID = UUID.fromString("736f5af6-85ef-4619-bbae-0c3fe441e2e4")
         private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private val BATTERY_SERVICE_UUID: UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
         private val BATTERY_LEVEL_CHAR_UUID: UUID = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")

@@ -17,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
@@ -31,6 +32,7 @@ fun MeasurementScreen(
     onNavigateToCompleteSegment: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isConnected = uiState.connectionState is BleConnectionState.Connected
     var selectedPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -78,10 +80,38 @@ fun MeasurementScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (!isConnected) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BluetoothDisabled,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Device not connected — connect a device to capture velocity",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.addManualPoint() },
+                    .then(if (isConnected) Modifier.clickable { viewModel.addManualPoint() } else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -94,7 +124,15 @@ fun MeasurementScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+                if (uiState.velocityOverLimit) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Above 5.00 m/s — outside measurement range",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -136,7 +174,7 @@ fun MeasurementScreen(
                 VelocityGraph(
                     readings = uiState.recentReadings,
                     windowSeconds = uiState.timeWindow,
-                    onTap = { viewModel.addManualPoint() },
+                    onTap = { if (isConnected) viewModel.addManualPoint() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
@@ -172,7 +210,7 @@ fun MeasurementScreen(
                         .fillMaxWidth()
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
                 ) {
                     items(uiState.manualPoints, key = { it.id }) { point ->
                         ManualPointItem(

@@ -4,7 +4,9 @@
 // uuids
 #define UUID_FLOW_SERVICE     "a177eaf2-c661-4f76-b07d-36826eca67bd"
 #define UUID_VELOCITY_CHAR    "0f6866f4-8a14-43a9-b7e4-93075f456d5c"
+#define UUID_STATUS_CHAR      "736f5af6-85ef-4619-bbae-0c3fe441e2e4"  
 
+void ble_send_status(bool device_connected);
 void pair_complete_callback(uint16_t conn_handle, uint8_t auth_status);
 void ble_setup();
 void ble_loop();
@@ -17,3 +19,4 @@ bool ble_is_connected();
 bool ble_is_advertising();
 bool ble_is_enabled();
 extern uint8_t (*battery_callback)();
+extern bool (*status_callback)();

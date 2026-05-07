@@ -4,7 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Logo palette — tree silhouettes + water surface
-val SlateDeep = Color(0xFF111827)     // logo: deep tree (center pine)
+val SlateDeep = Color(0xFF111827)     // logo: deep tree. M
 val SlateDark = Color(0xFF1E2D40)     // logo: tree silhouette
 val SkyMid = Color(0xFF38BDF8)        // logo: water surface / primary accent
 val SkyDeep = Color(0xFF0284C7)       // logo: deep water

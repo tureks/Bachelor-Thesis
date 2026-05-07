@@ -6,12 +6,14 @@
 BLEBas battery_service;
 BLEService flow_service(UUID_FLOW_SERVICE);
 BLECharacteristic velocity_char(UUID_VELOCITY_CHAR, BLENotify, 20);
+BLECharacteristic status_char(UUID_STATUS_CHAR, BLERead | BLENotify, 1);
 
 static bool ble_enabled = false;
 static bool ble_advertising = false;
 static uint32_t ble_disconnect_time = 0;
 
 uint8_t (*battery_callback)() = nullptr;
+bool (*status_callback)() = nullptr;
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
     ble_advertising = false;
@@ -35,6 +37,11 @@ void connect_callback(uint16_t conn_handle) {
         battery_service.write(pct);
         battery_service.notify(pct);
     }
+    if (status_callback != nullptr) {
+        uint8_t val = status_callback();
+        status_char.write(&val, 1);
+        status_char.notify(&val, 1);
+    }
 }
 
 void adv_stop_callback() {
@@ -52,7 +59,7 @@ void pair_complete_callback(uint16_t conn_handle, uint8_t auth_status) {
 }
 
 void ble_setup() {
-    Bluefruit.begin();
+    Bluefruit.begin(1, 0);
     Bluefruit.setName("FlowMeter");
 
     // bonding setup
@@ -68,6 +75,8 @@ void ble_setup() {
     battery_service.begin();
     flow_service.begin();
     velocity_char.begin();
+    err_t status_err = status_char.begin();
+    Serial.print("status_char.begin() = "); Serial.println(status_err);
 
     // advertising config
     Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
@@ -144,6 +153,14 @@ void ble_send_battery(uint8_t percent) {
     if (Bluefruit.connected()) {
         battery_service.write(percent);
         battery_service.notify(percent);
+    }
+}
+
+void ble_send_status(bool device_connected) {
+    if (Bluefruit.connected()) {
+        uint8_t val = device_connected ? 1 : 0;
+        status_char.write(&val, 1);
+        status_char.notify(&val, 1);
     }
 }
 

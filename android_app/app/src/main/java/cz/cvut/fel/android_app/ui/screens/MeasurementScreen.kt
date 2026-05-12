@@ -20,18 +20,25 @@ import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.*
+import cz.cvut.fel.android_app.viewmodel.BleViewModel
+import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import java.util.Locale
 
 @Composable
 fun MeasurementScreen(
-    viewModel: StreamMeasurementViewModel,
+    bleViewModel: BleViewModel,
+    captureViewModel: CaptureViewModel,
+    measurementViewModel: MeasurementViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToCompleteSegment: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isConnected = uiState.connectionState is BleConnectionState.Connected
+    val bleState by bleViewModel.uiState.collectAsState()
+    val captureState by captureViewModel.uiState.collectAsState()
+    val measureState by measurementViewModel.uiState.collectAsState()
+
+    val isConnected = bleState.connectionState is BleConnectionState.Connected
     var selectedPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -39,7 +46,24 @@ fun MeasurementScreen(
 
     BackHandler { onNavigateBack() }
 
-    val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
+    // When resuming an editing session, pre-populate capture state from the loaded points.
+    LaunchedEffect(measureState.editingSegment, measureState.editingPoints) {
+        val segment = measureState.editingSegment
+        if (segment != null && measureState.editingPoints.isNotEmpty()) {
+            captureViewModel.setForEditing(
+                measureState.editingPoints,
+                segment.segmentWidth,
+                segment.depth,
+                measureState.preferredUnit
+            )
+        }
+    }
+
+    LaunchedEffect(measureState.error) {
+        measureState.error?.let { measurementViewModel.clearError() }
+    }
+
+    val segmentNumber = measureState.editingSegment?.segmentNumber ?: (measureState.segments.size + 1)
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
@@ -83,20 +107,14 @@ fun MeasurementScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.BluetoothDisabled,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
+                        Icon(Icons.Default.BluetoothDisabled, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                         Text(
                             text = "Device not connected — connect a device to capture velocity",
                             style = MaterialTheme.typography.bodyMedium,
@@ -109,11 +127,11 @@ fun MeasurementScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (isConnected) Modifier.clickable { viewModel.addManualPoint() } else Modifier),
+                    .then(if (isConnected) Modifier.clickable { captureViewModel.addManualPoint(bleState.windowAverage) } else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = String.format(Locale.US, "%.2f m/s", uiState.windowAverage),
+                    text = String.format(Locale.US, "%.2f m/s", bleState.windowAverage),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -122,7 +140,7 @@ fun MeasurementScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (uiState.velocityOverLimit) {
+                if (bleState.velocityOverLimit) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Above 5.00 m/s — outside measurement range",
@@ -138,27 +156,17 @@ fun MeasurementScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = String.format(Locale.US, "%.2f m/s", uiState.windowMin ?: 0.0),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = String.format(Locale.US, "%.2f m/s", bleState.windowMin),
+                            style = MaterialTheme.typography.titleMedium
                         )
-                        Text(
-                            text = "Min",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("Min", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = String.format(Locale.US, "%.2f m/s", uiState.windowMax ?: 0.0),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = String.format(Locale.US, "%.2f m/s", bleState.windowMax),
+                            style = MaterialTheme.typography.titleMedium
                         )
-                        Text(
-                            text = "Max",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("Max", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -170,9 +178,9 @@ fun MeasurementScreen(
                 border = CardDefaults.outlinedCardBorder(enabled = true)
             ) {
                 VelocityGraph(
-                    readings = uiState.recentReadings,
-                    windowSeconds = uiState.timeWindow,
-                    onTap = { if (isConnected) viewModel.addManualPoint() },
+                    readings = bleState.recentReadings,
+                    windowSeconds = bleState.timeWindow,
+                    onTap = { if (isConnected) captureViewModel.addManualPoint(bleState.windowAverage) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
@@ -188,7 +196,7 @@ fun MeasurementScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (uiState.manualPoints.isEmpty()) {
+            if (captureState.manualPoints.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -210,10 +218,10 @@ fun MeasurementScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
                 ) {
-                    items(uiState.manualPoints, key = { it.id }) { point ->
+                    items(captureState.manualPoints, key = { it.id }) { point ->
                         ManualPointItem(
                             point = point,
-                            unit = uiState.preferredUnit,
+                            unit = measureState.preferredUnit,
                             onEdit = { selectedPoint = point }
                         )
                     }
@@ -235,7 +243,8 @@ fun MeasurementScreen(
         CancelMeasurementDialog(
             onDismiss = { showCancelDialog = false },
             onConfirm = {
-                viewModel.cancelMeasurement()
+                measurementViewModel.cancelMeasurement()
+                captureViewModel.reset()
                 onNavigateBack()
             }
         )
@@ -243,10 +252,10 @@ fun MeasurementScreen(
 
     if (showTimeWindowDialog) {
         TimeWindowDialog(
-            currentWindow = uiState.timeWindow,
+            currentWindow = bleState.timeWindow,
             onDismiss = { showTimeWindowDialog = false },
             onConfirm = {
-                viewModel.setTimeWindow(it)
+                bleViewModel.setTimeWindow(it)
                 showTimeWindowDialog = false
             }
         )
@@ -255,14 +264,14 @@ fun MeasurementScreen(
     selectedPoint?.let { point ->
         EditPointDialog(
             point = point,
-            unit = uiState.preferredUnit,
+            unit = measureState.preferredUnit,
             onDismiss = { selectedPoint = null },
             onUpdateHeight = { height ->
-                viewModel.updateManualPointHeight(point.id, height)
+                captureViewModel.updateManualPointHeight(point.id, height)
                 selectedPoint = null
             },
             onDelete = {
-                viewModel.deleteManualPoint(point.id)
+                captureViewModel.deleteManualPoint(point.id)
                 selectedPoint = null
             }
         )

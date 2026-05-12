@@ -25,10 +25,12 @@ import cz.cvut.fel.android_app.ui.screens.MeasurementDetailsScreen
 import cz.cvut.fel.android_app.ui.screens.MeasurementScreen
 import cz.cvut.fel.android_app.ui.screens.ReviewSegmentsScreen
 import cz.cvut.fel.android_app.ui.screens.SettingsScreen
+import cz.cvut.fel.android_app.viewmodel.BleViewModel
+import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
 import cz.cvut.fel.android_app.viewmodel.MeasurementDetailViewModel
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
 private fun NavHostController.safePopBackStack() {
@@ -40,7 +42,9 @@ private fun NavHostController.safePopBackStack() {
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    measurementViewModel: StreamMeasurementViewModel,
+    bleViewModel: BleViewModel,
+    captureViewModel: CaptureViewModel,
+    measurementViewModel: MeasurementViewModel,
     deviceViewModel: DeviceViewModel,
     historyViewModel: HistoryViewModel,
     userViewModel: UserViewModel,
@@ -74,7 +78,9 @@ fun AppNavigation(
         ) {
             composable(Screen.Main.route) {
                 MainScreen(
-                    viewModel = measurementViewModel,
+                    bleViewModel = bleViewModel,
+                    captureViewModel = captureViewModel,
+                    measurementViewModel = measurementViewModel,
                     onNavigateToMeasurement = { navController.navigate(Screen.Measurement.route) },
                     onNavigateToDevice = { navController.navigate(Screen.Device.route) { launchSingleTop = true } },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
@@ -83,11 +89,14 @@ fun AppNavigation(
             }
             composable(Screen.Measurement.route) {
                 MeasurementScreen(
-                    viewModel = measurementViewModel,
+                    bleViewModel = bleViewModel,
+                    captureViewModel = captureViewModel,
+                    measurementViewModel = measurementViewModel,
                     onNavigateBack = {
-                        val state = measurementViewModel.uiState.value
-                        if (state.manualPoints.isEmpty() && state.editingSegment == null && state.segments.isNotEmpty()) {
-                            measurementViewModel.startEditingSegment(state.segments.last())
+                        val captureState = captureViewModel.uiState.value
+                        val measureState = measurementViewModel.uiState.value
+                        if (captureState.manualPoints.isEmpty() && measureState.editingSegment == null && measureState.segments.isNotEmpty()) {
+                            measurementViewModel.startEditingSegment(measureState.segments.last())
                         }
                         navController.safePopBackStack()
                     },
@@ -98,7 +107,8 @@ fun AppNavigation(
             }
             composable(Screen.CompleteSegment.route) {
                 CompleteSegmentScreen(
-                    viewModel = measurementViewModel,
+                    captureViewModel = captureViewModel,
+                    measurementViewModel = measurementViewModel,
                     onNavigateBack = { navController.safePopBackStack() },
                     onNavigateToMeasurement = {
                         navController.navigate(Screen.Measurement.route) { launchSingleTop = true }

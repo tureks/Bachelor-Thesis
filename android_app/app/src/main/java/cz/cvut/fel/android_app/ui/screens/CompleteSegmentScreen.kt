@@ -18,37 +18,39 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.*
+import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import java.util.Locale
 
 private val DecimalKeyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal)
 
 @Composable
 fun CompleteSegmentScreen(
-    viewModel: StreamMeasurementViewModel,
+    captureViewModel: CaptureViewModel,
+    measurementViewModel: MeasurementViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToMeasurement: () -> Unit,
     onNavigateToFinalize: () -> Unit,
     onNavigateToMain: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val captureState by captureViewModel.uiState.collectAsState()
+    val measureState by measurementViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    var selectedPointIds by remember { mutableStateOf(uiState.manualPoints.map { it.id }.toSet()) }
+    var selectedPointIds by remember { mutableStateOf(captureState.manualPoints.map { it.id }.toSet()) }
 
-    LaunchedEffect(uiState.manualPoints) {
-        selectedPointIds = uiState.manualPoints.map { it.id }.toSet()
+    LaunchedEffect(captureState.manualPoints) {
+        selectedPointIds = captureState.manualPoints.map { it.id }.toSet()
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let {
+    LaunchedEffect(measureState.error) {
+        measureState.error?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
+            measurementViewModel.clearError()
         }
     }
 
@@ -56,23 +58,38 @@ fun CompleteSegmentScreen(
     var showCancelDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val width = uiState.currentWidth
-    val depth = uiState.currentDepth
+    val width = captureState.currentWidth
+    val depth = captureState.currentDepth
+    val unit = measureState.preferredUnit
 
-    val isValid = width.isNotEmpty() && depth.isNotEmpty() && (selectedPointIds.isNotEmpty() || uiState.editingSegment != null)
-    val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)
+    val isValid = width.isNotEmpty() && depth.isNotEmpty() &&
+            (selectedPointIds.isNotEmpty() || measureState.editingSegment != null)
 
-    val unit = uiState.preferredUnit
-    val calculatedFlow = remember(width, depth, selectedPointIds, uiState.manualPoints, unit) {
+    val segmentNumber = measureState.editingSegment?.segmentNumber ?: (measureState.segments.size + 1)
+
+    val calculatedFlow = remember(width, depth, selectedPointIds, captureState.manualPoints, unit) {
         val w = UnitConverter.displayToMeters(width.toDoubleOrNull() ?: 0.0, unit)
         val d = UnitConverter.displayToMeters(depth.toDoubleOrNull() ?: 0.0, unit)
-        val selectedPoints = uiState.manualPoints.filter { selectedPointIds.contains(it.id) }
+        val selectedPoints = captureState.manualPoints.filter { selectedPointIds.contains(it.id) }
         val avgV = if (selectedPoints.isEmpty()) {
-            uiState.editingSegment?.averageVelocity ?: 0.0
+            measureState.editingSegment?.averageVelocity ?: 0.0
         } else {
             selectedPoints.map { it.velocity }.average()
         }
         UnitConverter.m3sToDisplay(avgV * w * d, unit)
+    }
+
+    fun completeWith(onSuccess: () -> Unit) {
+        val filteredPoints = captureState.manualPoints.filter { selectedPointIds.contains(it.id) }
+        measurementViewModel.completeSegment(
+            width.toDoubleOrNull() ?: 0.0,
+            depth.toDoubleOrNull() ?: 0.0,
+            filteredPoints,
+            onComplete = {
+                captureViewModel.reset()
+                onSuccess()
+            }
+        )
     }
 
     Scaffold(
@@ -133,14 +150,14 @@ fun CompleteSegmentScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppTextField(
                     value = width,
-                    onValueChange = { viewModel.setCurrentWidth(it) },
+                    onValueChange = { captureViewModel.setCurrentWidth(it) },
                     label = "Width (${UnitConverter.lengthLabel(unit)})",
                     modifier = Modifier.weight(1f),
                     keyboardOptions = DecimalKeyboard
                 )
                 AppTextField(
                     value = depth,
-                    onValueChange = { viewModel.setCurrentDepth(it) },
+                    onValueChange = { captureViewModel.setCurrentDepth(it) },
                     label = "Depth (${UnitConverter.lengthLabel(unit)})",
                     modifier = Modifier.weight(1f),
                     keyboardOptions = DecimalKeyboard
@@ -160,10 +177,10 @@ fun CompleteSegmentScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
             ) {
-                items(uiState.manualPoints, key = { it.id }) { point ->
+                items(captureState.manualPoints, key = { it.id }) { point ->
                     SegmentPointItem(
                         point = point,
-                        unit = uiState.preferredUnit,
+                        unit = unit,
                         isSelected = selectedPointIds.contains(point.id),
                         onToggle = {
                             selectedPointIds = if (selectedPointIds.contains(point.id)) {
@@ -186,18 +203,9 @@ fun CompleteSegmentScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = {
-                        viewModel.completeSegment(
-                            width.toDoubleOrNull() ?: 0.0,
-                            depth.toDoubleOrNull() ?: 0.0,
-                            selectedPointIds,
-                            onComplete = onNavigateToFinalize
-                        )
-                    },
+                    onClick = { completeWith(onNavigateToFinalize) },
                     enabled = isValid,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
+                    modifier = Modifier.weight(1f).height(56.dp),
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -211,18 +219,9 @@ fun CompleteSegmentScreen(
                 }
 
                 Button(
-                    onClick = {
-                        viewModel.completeSegment(
-                            width.toDoubleOrNull() ?: 0.0,
-                            depth.toDoubleOrNull() ?: 0.0,
-                            selectedPointIds,
-                            onComplete = onNavigateToMeasurement
-                        )
-                    },
+                    onClick = { completeWith(onNavigateToMeasurement) },
                     enabled = isValid,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
+                    modifier = Modifier.weight(1f).height(56.dp),
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -242,7 +241,8 @@ fun CompleteSegmentScreen(
         CancelMeasurementDialog(
             onDismiss = { showCancelDialog = false },
             onConfirm = {
-                viewModel.cancelMeasurement()
+                measurementViewModel.cancelMeasurement()
+                captureViewModel.reset()
                 showCancelDialog = false
                 onNavigateToMain()
             }
@@ -252,14 +252,14 @@ fun CompleteSegmentScreen(
     editingPoint?.let { point ->
         EditPointDialog(
             point = point,
-            unit = uiState.preferredUnit,
+            unit = unit,
             onDismiss = { editingPoint = null },
             onUpdateHeight = { newHeight ->
-                viewModel.updateManualPointHeight(point.id, newHeight)
+                captureViewModel.updateManualPointHeight(point.id, newHeight)
                 editingPoint = null
             },
             onDelete = {
-                viewModel.deleteManualPoint(point.id)
+                captureViewModel.deleteManualPoint(point.id)
                 editingPoint = null
             }
         )

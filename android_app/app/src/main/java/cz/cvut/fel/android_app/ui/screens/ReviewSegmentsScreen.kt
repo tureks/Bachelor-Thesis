@@ -16,11 +16,11 @@ import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditSegmentDialog
 import cz.cvut.fel.android_app.ui.components.domain.SegmentSummaryItem
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 
 @Composable
 fun ReviewSegmentsScreen(
-    viewModel: StreamMeasurementViewModel,
+    viewModel: MeasurementViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToMetadata: () -> Unit,
     onNavigateToMain: () -> Unit

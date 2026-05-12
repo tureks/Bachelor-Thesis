@@ -109,24 +109,6 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_toTimestamp_filtersNewerMeasurements() {
-        runTest {
-            repository.seed(
-                measurement(id = 1, measureTimestamp = 500L),
-                measurement(id = 2, measureTimestamp = 1500L),
-                measurement(id = 3, measureTimestamp = 2500L),
-            )
-
-            useCase(toTimestamp = 1500L).test {
-                val result = awaitItem()
-                assertEquals(2, result.size)
-                assertTrue(result.all { it.measureTimestamp <= 1500L })
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-    }
-
-    @Test
     fun invoke_fromTimestamp_sortsByTimestampAscending() {
         runTest {
             repository.seed(

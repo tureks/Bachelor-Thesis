@@ -10,15 +10,19 @@ import androidx.activity.viewModels
 import androidx.navigation.compose.rememberNavController
 import cz.cvut.fel.android_app.ui.AppNavigation
 import cz.cvut.fel.android_app.ui.theme.Android_appTheme
+import cz.cvut.fel.android_app.viewmodel.BleViewModel
+import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
 import cz.cvut.fel.android_app.viewmodel.MeasurementDetailViewModel
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val measurementViewModel: StreamMeasurementViewModel by viewModels { StreamMeasurementViewModel.Factory }
+    private val bleViewModel: BleViewModel by viewModels { BleViewModel.Factory }
+    private val captureViewModel: CaptureViewModel by viewModels { CaptureViewModel.Factory }
+    private val measurementViewModel: MeasurementViewModel by viewModels { MeasurementViewModel.Factory }
     private val deviceViewModel: DeviceViewModel by viewModels { DeviceViewModel.Factory }
     private val userViewModel: UserViewModel by viewModels { UserViewModel.Factory }
     private val historyViewModel: HistoryViewModel by viewModels { HistoryViewModel.Factory }
@@ -49,6 +53,8 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 AppNavigation(
                     navController = navController,
+                    bleViewModel = bleViewModel,
+                    captureViewModel = captureViewModel,
                     measurementViewModel = measurementViewModel,
                     deviceViewModel = deviceViewModel,
                     historyViewModel = historyViewModel,

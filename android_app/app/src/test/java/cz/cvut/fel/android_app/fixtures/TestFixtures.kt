@@ -19,7 +19,6 @@ fun measurement(
     totalFlow: Double? = null,
 ) = StreamMeasurement(
     id = id,
-    referenceModel = 0,
     name = name,
     note = note,
     measureTimestamp = measureTimestamp,
@@ -28,7 +27,6 @@ fun measurement(
     totalWidth = totalWidth,
     maxDepth = maxDepth,
     totalFlow = totalFlow,
-    deviceId = null,
     status = status,
 )
 

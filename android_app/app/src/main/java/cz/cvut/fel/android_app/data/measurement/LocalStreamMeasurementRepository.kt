@@ -17,8 +17,14 @@ class LocalStreamMeasurementRepository(
     private val velocityPointDao: VelocityPointDao
 ) : StreamMeasurementRepository {
 
-    override fun getCompleted(): Flow<List<StreamMeasurement>> =
-        measurementDao.getCompleted().map { list -> list.map { it.toDomain() } }
+    override fun search(query: String, fromTimestamp: Long?): Flow<List<StreamMeasurement>> {
+        val flow = if (fromTimestamp != null) {
+            measurementDao.searchFromDate(query, fromTimestamp)
+        } else {
+            measurementDao.search(query)
+        }
+        return flow.map { list -> list.map { it.toDomain() } }
+    }
 
     override fun getDraftFlow(): Flow<StreamMeasurement?> =
         measurementDao.getDraftFlow().map { it?.toDomain() }

@@ -20,21 +20,26 @@ import cz.cvut.fel.android_app.ui.components.base.AppButton
 import cz.cvut.fel.android_app.ui.components.base.AppLogo
 import cz.cvut.fel.android_app.ui.components.base.AppOutlinedButton
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.BleViewModel
+import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 
 private const val BATTERY_LOW_THRESHOLD = 20
 
 @Composable
 fun MainScreen(
-    viewModel: StreamMeasurementViewModel,
+    bleViewModel: BleViewModel,
+    captureViewModel: CaptureViewModel,
+    measurementViewModel: MeasurementViewModel,
     onNavigateToMeasurement: () -> Unit,
     onNavigateToDevice: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isConnected = uiState.connectionState is BleConnectionState.Connected
-    val isProbeConnected = uiState.probeConnected
+    val bleState by bleViewModel.uiState.collectAsState()
+    val measureState by measurementViewModel.uiState.collectAsState()
+    val isConnected = bleState.connectionState is BleConnectionState.Connected
+    val isProbeConnected = bleState.probeConnected
     var showOverwriteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -75,11 +80,11 @@ fun MainScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isConnected) "Battery: ${uiState.batteryLevel}%" else "Connect",
+                            text = if (isConnected) "Battery: ${bleState.batteryLevel}%" else "Connect",
                             style = MaterialTheme.typography.bodyMedium,
                             color = when {
                                 !isConnected -> MaterialTheme.colorScheme.primary
-                                uiState.batteryLevel < BATTERY_LOW_THRESHOLD -> MaterialTheme.colorScheme.error
+                                bleState.batteryLevel < BATTERY_LOW_THRESHOLD -> MaterialTheme.colorScheme.error
                                 else -> MaterialTheme.colorScheme.onSurface
                             }
                         )
@@ -151,16 +156,16 @@ fun MainScreen(
                         icon = Icons.Default.Add,
                         enabled = isConnected,
                         onClick = {
-                            if (uiState.measurement != null) {
+                            if (measureState.measurement != null) {
                                 showOverwriteDialog = true
                             } else {
-                                viewModel.startNewMeasurement()
+                                measurementViewModel.startNewMeasurement()
                                 onNavigateToMeasurement()
                             }
                         }
                     )
 
-                    if (uiState.measurement != null) {
+                    if (measureState.measurement != null) {
                         Spacer(modifier = Modifier.height(16.dp))
                         AppButton(
                             text = "Continue Measurement",
@@ -198,7 +203,8 @@ fun MainScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.startNewMeasurement()
+                        measurementViewModel.startNewMeasurement()
+                        captureViewModel.reset()
                         onNavigateToMeasurement()
                         showOverwriteDialog = false
                     },

@@ -152,20 +152,9 @@ class HistoryViewModel(
         if (ids.isEmpty()) return
         viewModelScope.launch {
             _isExporting.value = true
-            try {
-                val profile = userRepository.userProfile.first()
-                val names = uiState.value.measurements.filter { it.id in ids }.map { it.name }
-                _exportMeta.value = ExportMeta(
-                    names = names,
-                    userEmail = profile?.email ?: "",
-                    operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
-                )
-                _exportContent.value = exportStreamMeasurementUseCase(ids)
-            } catch (e: Exception) {
-                _error.value = "Export failed: ${e.message}"
-            } finally {
-                _isExporting.value = false
-            }
+            try { _exportContent.value = generateExportContent(ids) }
+            catch (e: Exception) { _error.value = "Export failed: ${e.message}" }
+            finally { _isExporting.value = false }
         }
     }
 
@@ -174,21 +163,20 @@ class HistoryViewModel(
         if (ids.isEmpty()) return
         viewModelScope.launch {
             _isExporting.value = true
-            try {
-                val profile = userRepository.userProfile.first()
-                val names = uiState.value.measurements.filter { it.id in ids }.map { it.name }
-                _exportMeta.value = ExportMeta(
-                    names = names,
-                    userEmail = profile?.email ?: "",
-                    operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
-                )
-                _downloadContent.value = exportStreamMeasurementUseCase(ids)
-            } catch (e: Exception) {
-                _error.value = "Export failed: ${e.message}"
-            } finally {
-                _isExporting.value = false
-            }
+            try { _downloadContent.value = generateExportContent(ids) }
+            catch (e: Exception) { _error.value = "Export failed: ${e.message}" }
+            finally { _isExporting.value = false }
         }
+    }
+
+    private suspend fun generateExportContent(ids: List<Int>): String {
+        val profile = userRepository.userProfile.first()
+        val unit = uiState.value.preferredUnit
+        val names = uiState.value.measurements.filter { it.id in ids }.map { it.name }
+        val operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
+        val email = profile?.email ?: ""
+        _exportMeta.value = ExportMeta(names = names, userEmail = email, operatorName = operatorName)
+        return exportStreamMeasurementUseCase(ids, unit, operatorName, email)
     }
 
     fun deleteMeasurement(measurement: StreamMeasurement) {
@@ -221,10 +209,7 @@ class HistoryViewModel(
                 val app = this[APPLICATION_KEY] as App
                 HistoryViewModel(
                     searchMeasurementsUseCase = SearchMeasurementsUseCase(app.measurementRepository),
-                    exportStreamMeasurementUseCase = ExportStreamMeasurementUseCase(
-                        app.measurementRepository,
-                        app.userRepository
-                    ),
+                    exportStreamMeasurementUseCase = ExportStreamMeasurementUseCase(app.measurementRepository),
                     measurementRepository = app.measurementRepository,
                     userRepository = app.userRepository
                 )

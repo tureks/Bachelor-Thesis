@@ -26,8 +26,19 @@ class FakeStreamMeasurementRepository : StreamMeasurementRepository {
 
     fun seedPoints(vararg ps: VelocityPoint) = points.addAll(ps)
 
-    override fun getCompleted(): Flow<List<StreamMeasurement>> =
-        measurementsFlow.map { it.filter { m -> m.status == StreamMeasurementStatus.COMPLETE } }
+    override fun search(query: String, fromTimestamp: Long?): Flow<List<StreamMeasurement>> =
+        measurementsFlow.map { list ->
+            val completed = list.filter { it.status == StreamMeasurementStatus.COMPLETE }
+            val filtered = if (query.isBlank()) completed else completed.filter { m ->
+                m.name.contains(query, ignoreCase = true) ||
+                        m.note?.contains(query, ignoreCase = true) == true
+            }
+            if (fromTimestamp != null) {
+                filtered.filter { it.measureTimestamp >= fromTimestamp }.sortedBy { it.measureTimestamp }
+            } else {
+                filtered.sortedByDescending { it.measureTimestamp }
+            }
+        }
 
     override fun getDraftFlow(): Flow<StreamMeasurement?> =
         measurementsFlow.map { it.firstOrNull { m -> m.status == StreamMeasurementStatus.DRAFT } }
@@ -93,15 +104,4 @@ class FakeStreamMeasurementRepository : StreamMeasurementRepository {
 
     override suspend fun deleteVelocityPoints(segmentId: Int) =
         points.removeAll { it.segmentId == segmentId }.let {}
-
-    override suspend fun setAsDraft(measurementId: Int) {
-        measurements.replaceAll { m ->
-            when {
-                m.id == measurementId -> m.copy(status = StreamMeasurementStatus.DRAFT)
-                m.status == StreamMeasurementStatus.DRAFT -> m.copy(status = StreamMeasurementStatus.COMPLETE)
-                else -> m
-            }
-        }
-        measurementsFlow.value = measurements.toList()
-    }
 }

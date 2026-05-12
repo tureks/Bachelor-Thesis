@@ -6,8 +6,12 @@ import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import kotlinx.coroutines.flow.Flow
 
 interface StreamMeasurementRepository {
-    /** Emits all COMPLETE measurements, updating reactively on any change. */
-    fun getCompleted(): Flow<List<StreamMeasurement>>
+    /**
+     * Emits COMPLETE measurements matching [query] against name/note.
+     * If [fromTimestamp] is set, only measurements from that epoch-ms onward are returned, ordered ascending.
+     * Otherwise results are ordered newest-first.
+     */
+    fun search(query: String = "", fromTimestamp: Long? = null): Flow<List<StreamMeasurement>>
     /** Emits the current DRAFT measurement, or null, updating reactively. */
     fun getDraftFlow(): Flow<StreamMeasurement?>
     /** Returns the current DRAFT measurement, or null if none exists. */

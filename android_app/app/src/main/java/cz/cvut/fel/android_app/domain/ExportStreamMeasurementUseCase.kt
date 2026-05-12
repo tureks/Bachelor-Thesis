@@ -1,36 +1,36 @@
 package cz.cvut.fel.android_app.domain
 
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
-import cz.cvut.fel.android_app.domain.model.UserProfile
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
-import cz.cvut.fel.android_app.domain.repository.UserRepository
-import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ExportStreamMeasurementUseCase(
-    private val repository: StreamMeasurementRepository,
-    private val userRepository: UserRepository
+    private val repository: StreamMeasurementRepository
 ) {
     /**
      * Generates a CSV report for one or more stream measurements.
      * @param measurementIds IDs of the exported measurements
-     * @return CSV string respecting the user's preferred unit (Metric or Hydrometric)
+     * @param unit display unit for lengths and flow values
+     * @param operatorName operator name written into the report header
+     * @param contactEmail contact email written into the report header
+     * @return CSV string
      */
-    suspend operator fun invoke(measurementIds: List<Int>): String {
-        val profile = userRepository.userProfile.first()
-        val unit = profile?.preferredUnit ?: MeasurementUnit.HYDROMETRIC
+    suspend operator fun invoke(
+        measurementIds: List<Int>,
+        unit: MeasurementUnit,
+        operatorName: String = "",
+        contactEmail: String = ""
+    ): String {
         val sb = StringBuilder()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
         sb.append("\"PROPERTY\",\"VALUE\"\n")
         sb.append("\"Report Type\",\"Stream Gauging Measurement Report\"\n")
         sb.append("\"Export Date\",\"${dateFormat.format(Date())}\"\n")
-        profile?.let {
-            sb.append("\"Operator\",${csvField("${it.firstName} ${it.lastName}")}\n")
-            sb.append("\"Contact\",${csvField(it.email)}\n")
-        }
+        if (operatorName.isNotEmpty()) sb.append("\"Operator\",${csvField(operatorName)}\n")
+        if (contactEmail.isNotEmpty()) sb.append("\"Contact\",${csvField(contactEmail)}\n")
         sb.append("\n")
 
         for (measurementId in measurementIds) {
@@ -75,9 +75,12 @@ class ExportStreamMeasurementUseCase(
         return sb.toString()
     }
 
-    suspend operator fun invoke(measurementId: Int): String {
-        return invoke(listOf(measurementId))
-    }
+    suspend operator fun invoke(
+        measurementId: Int,
+        unit: MeasurementUnit,
+        operatorName: String = "",
+        contactEmail: String = ""
+    ): String = invoke(listOf(measurementId), unit, operatorName, contactEmail)
 
     private fun formatFlow(m3s: Double?, unit: MeasurementUnit): String {
         if (m3s == null) return ""

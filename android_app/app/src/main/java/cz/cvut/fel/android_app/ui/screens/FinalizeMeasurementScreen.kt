@@ -15,12 +15,12 @@ import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
-import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import java.util.Locale
 
 @Composable
 fun FinalizeMeasurementScreen(
-    viewModel: StreamMeasurementViewModel,
+    viewModel: MeasurementViewModel,
     onNavigateBack: () -> Unit,
     onComplete: () -> Unit
 ) {

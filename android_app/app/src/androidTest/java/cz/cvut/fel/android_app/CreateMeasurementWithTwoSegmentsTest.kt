@@ -10,7 +10,6 @@ import cz.cvut.fel.android_app.domain.GetStreamMeasurementSummaryUseCase
 import cz.cvut.fel.android_app.domain.StartStreamMeasurementUseCase
 import cz.cvut.fel.android_app.domain.model.StreamMeasurementStatus
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
-import cz.cvut.fel.android_app.helpers.FakeUserRepository
 import cz.cvut.fel.android_app.helpers.TestDb
 import cz.cvut.fel.android_app.helpers.capturedPoint
 import kotlinx.coroutines.test.runTest
@@ -37,12 +36,9 @@ class CreateMeasurementWithTwoSegmentsTest {
         db = TestDb.build(ApplicationProvider.getApplicationContext())
         repository = TestDb.repository(db)
 
-        val calculateSegment = CalculateStreamSegmentUseCase()
-        val userRepository = FakeUserRepository()
         getSummary = GetStreamMeasurementSummaryUseCase(repository)
-
         startMeasurement = StartStreamMeasurementUseCase(repository)
-        completeSegment = CompleteStreamSegmentUseCase(repository, userRepository, calculateSegment)
+        completeSegment = CompleteStreamSegmentUseCase(repository, CalculateStreamSegmentUseCase())
         completeMeasurement = CompleteStreamMeasurementUseCase(repository, getSummary)
     }
 
@@ -53,7 +49,6 @@ class CreateMeasurementWithTwoSegmentsTest {
     fun createMeasurementWithTwoSegments_savesCorrectTotals() {
         runTest {
             val measurementId = startMeasurement().toInt()
-            // draft persisted with no segments yet
             val draft = repository.getById(measurementId)
             assertNotNull(draft)
             assertEquals(StreamMeasurementStatus.DRAFT, draft!!.status)
@@ -61,7 +56,7 @@ class CreateMeasurementWithTwoSegmentsTest {
 
             // segment 1: width=1.0m, depth=0.5m, velocity=2.0 m/s → flow=1.0 m³/s
             val seg1Points = listOf(capturedPoint(2.0), capturedPoint(2.0))
-            completeSegment(measurementId, segmentWidth = 1.0, depth = 0.5, points = seg1Points, selectedIndices = setOf(0, 1))
+            completeSegment(measurementId, segmentWidth = 1.0, depth = 0.5, points = seg1Points)
             val segsAfter1 = repository.getSegments(measurementId)
             assertEquals(1, segsAfter1.size)
             assertEquals(1.0, segsAfter1[0].segmentFlow, 1e-10)
@@ -69,7 +64,7 @@ class CreateMeasurementWithTwoSegmentsTest {
 
             // segment 2: width=2.0m, depth=0.3m, velocity=1.0 m/s → flow=0.6 m³/s
             val seg2Points = listOf(capturedPoint(1.0))
-            completeSegment(measurementId, segmentWidth = 2.0, depth = 0.3, points = seg2Points, selectedIndices = setOf(0))
+            completeSegment(measurementId, segmentWidth = 2.0, depth = 0.3, points = seg2Points)
             val segsAfter2 = repository.getSegments(measurementId)
             assertEquals(2, segsAfter2.size)
             assertEquals(0.6, segsAfter2[1].segmentFlow, 1e-10)
@@ -93,12 +88,12 @@ class CreateMeasurementWithTwoSegmentsTest {
             val measurementId = startMeasurement().toInt()
             assertEquals(0, repository.getSegments(measurementId).size)
 
-            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0)), setOf(0))
+            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0)))
             val segsAfter1 = repository.getSegments(measurementId)
             assertEquals(1, segsAfter1.size)
             assertEquals(1, segsAfter1[0].segmentNumber)
 
-            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0)), setOf(0))
+            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0)))
             val segments = repository.getSegments(measurementId)
             assertEquals(2, segments.size)
             assertEquals(1, segments[0].segmentNumber)
@@ -112,12 +107,12 @@ class CreateMeasurementWithTwoSegmentsTest {
             val measurementId = startMeasurement().toInt()
             assertEquals(0, repository.getSegments(measurementId).size)
 
-            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0), capturedPoint(2.0)), setOf(0, 1))
+            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(1.0), capturedPoint(2.0)))
             val segsAfter1 = repository.getSegments(measurementId)
             assertEquals(1, segsAfter1.size)
             assertEquals(2, repository.getVelocityPoints(segsAfter1[0].id).size)
 
-            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(3.0)), setOf(0))
+            completeSegment(measurementId, 1.0, 0.5, listOf(capturedPoint(3.0)))
             val segments = repository.getSegments(measurementId)
             val pointsSeg1 = repository.getVelocityPoints(segments[0].id)
             val pointsSeg2 = repository.getVelocityPoints(segments[1].id)

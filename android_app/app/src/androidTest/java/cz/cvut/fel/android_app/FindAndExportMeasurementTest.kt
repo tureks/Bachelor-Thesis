@@ -13,10 +13,8 @@ import cz.cvut.fel.android_app.domain.SearchMeasurementsUseCase
 import cz.cvut.fel.android_app.domain.StartStreamMeasurementUseCase
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
-import cz.cvut.fel.android_app.helpers.FakeUserRepository
 import cz.cvut.fel.android_app.helpers.TestDb
 import cz.cvut.fel.android_app.helpers.capturedPoint
-import cz.cvut.fel.android_app.helpers.defaultUserProfile
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -30,7 +28,6 @@ class FindAndExportMeasurementTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: StreamMeasurementRepository
-    private lateinit var userRepository: FakeUserRepository
 
     private lateinit var startMeasurement: StartStreamMeasurementUseCase
     private lateinit var completeSegment: CompleteStreamSegmentUseCase
@@ -42,16 +39,13 @@ class FindAndExportMeasurementTest {
     fun setUp() {
         db = TestDb.build(ApplicationProvider.getApplicationContext())
         repository = TestDb.repository(db)
-        userRepository = FakeUserRepository(defaultUserProfile(MeasurementUnit.HYDROMETRIC))
 
-        val calculateSegment = CalculateStreamSegmentUseCase()
         val getSummary = GetStreamMeasurementSummaryUseCase(repository)
-
         startMeasurement = StartStreamMeasurementUseCase(repository)
-        completeSegment = CompleteStreamSegmentUseCase(repository, userRepository, calculateSegment)
+        completeSegment = CompleteStreamSegmentUseCase(repository, CalculateStreamSegmentUseCase())
         completeMeasurement = CompleteStreamMeasurementUseCase(repository, getSummary)
         searchMeasurements = SearchMeasurementsUseCase(repository)
-        exportMeasurement = ExportStreamMeasurementUseCase(repository, userRepository)
+        exportMeasurement = ExportStreamMeasurementUseCase(repository)
     }
 
     @After
@@ -59,7 +53,7 @@ class FindAndExportMeasurementTest {
 
     private suspend fun seedMeasurement(name: String, note: String? = null): Int {
         val id = startMeasurement().toInt()
-        completeSegment(id, segmentWidth = 1.0, depth = 0.5, points = listOf(capturedPoint(1.0)), selectedIndices = setOf(0))
+        completeSegment(id, segmentWidth = 1.0, depth = 0.5, points = listOf(capturedPoint(1.0)))
         completeMeasurement(id, name = name, note = note)
         return id
     }
@@ -102,7 +96,7 @@ class FindAndExportMeasurementTest {
     fun export_containsMeasurementName() {
         runTest {
             val id = seedMeasurement("Orlice pramen")
-            val csv = exportMeasurement(id)
+            val csv = exportMeasurement(id, MeasurementUnit.HYDROMETRIC)
             assertTrue(csv.contains("Orlice pramen"))
         }
     }
@@ -111,7 +105,7 @@ class FindAndExportMeasurementTest {
     fun export_containsOperatorInfo() {
         runTest {
             val id = seedMeasurement("Test")
-            val csv = exportMeasurement(id)
+            val csv = exportMeasurement(id, MeasurementUnit.HYDROMETRIC, operatorName = "Jan Novák", contactEmail = "jan@example.com")
             assertTrue(csv.contains("Jan Novák"))
             assertTrue(csv.contains("jan@example.com"))
         }
@@ -121,7 +115,7 @@ class FindAndExportMeasurementTest {
     fun export_hydrometric_usesCorrectLabels() {
         runTest {
             val id = seedMeasurement("Test")
-            val csv = exportMeasurement(id)
+            val csv = exportMeasurement(id, MeasurementUnit.HYDROMETRIC)
             assertTrue(csv.contains("cm"))
             assertTrue(csv.contains("L/s"))
         }
@@ -130,12 +124,8 @@ class FindAndExportMeasurementTest {
     @Test
     fun export_metric_usesCorrectLabels() {
         runTest {
-            val metricExport = ExportStreamMeasurementUseCase(
-                repository,
-                FakeUserRepository(defaultUserProfile(MeasurementUnit.METRIC))
-            )
             val id = seedMeasurement("Test")
-            val csv = metricExport(id)
+            val csv = exportMeasurement(id, MeasurementUnit.METRIC)
             assertTrue(csv.contains("m3/s"))
         }
     }
@@ -144,15 +134,14 @@ class FindAndExportMeasurementTest {
     fun export_containsSegmentData() {
         runTest {
             val id = startMeasurement().toInt()
-            completeSegment(id, 1.0, 0.5, listOf(capturedPoint(2.0)), setOf(0))
-            completeSegment(id, 2.0, 0.3, listOf(capturedPoint(1.0)), setOf(0))
+            completeSegment(id, 1.0, 0.5, listOf(capturedPoint(2.0)))
+            completeSegment(id, 2.0, 0.3, listOf(capturedPoint(1.0)))
             completeMeasurement(id, name = "Two Segments")
 
-            val csv = exportMeasurement(id)
+            val csv = exportMeasurement(id, MeasurementUnit.HYDROMETRIC)
 
             assertTrue(csv.contains("SEGMENT DATA"))
             assertTrue(csv.contains("RAW VELOCITY READINGS"))
-            // raw velocity rows: "<segmentNumber>,<velocity>,"
             assertTrue(csv.contains("1,2.00,"))
             assertTrue(csv.contains("2,1.00,"))
         }

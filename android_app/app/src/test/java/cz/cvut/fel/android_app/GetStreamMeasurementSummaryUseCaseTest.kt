@@ -20,8 +20,6 @@ class GetStreamMeasurementSummaryUseCaseTest {
         useCase = GetStreamMeasurementSummaryUseCase(repository)
     }
 
-    // ── happy path ───────────────────────────────────────────────────────────
-
     @Test
     fun invoke_noSegments_returnsAllZeros() {
         runTest {

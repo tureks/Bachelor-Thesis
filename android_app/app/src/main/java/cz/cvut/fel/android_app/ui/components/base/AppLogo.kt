@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-// Colors — slate-blue silhouette trees, bright sky-blue water
 private val TreeColor = Color(0xFF1E2D40)
 private val TreeDeepColor = Color(0xFF111827)
 private val WaterColor = Color(0xFF38BDF8)
@@ -29,26 +28,20 @@ fun AppLogo(modifier: Modifier = Modifier) {
             .aspectRatio(1f)
     ) {
         val scale = size.width / 200f
-        
-        // Water lines (flowing under)
+
         drawWaterLine(this, 145f + 25f - 8f, 4f, 5.5f, WaterColor.copy(alpha = 0.55f), scale)
         drawWaterLine(this, 145f + 25f, 5f, 10f, WaterColor, scale)
         drawWaterLine(this, 145f + 25f + 8f, 4f, 5.5f, WaterDeepColor.copy(alpha = 0.65f), scale)
 
-        // Pines
         val groundY = 145f
         val centerTop = groundY - 110f
         val sideTop = groundY - 82f
         val backTop = groundY - 65f
 
-        // Background pines (drawn first)
         drawPine(this, 75f, backTop, groundY, 40f, 3, TreeColor.copy(alpha = 0.45f), scale)
         drawPine(this, 125f, backTop, groundY, 40f, 3, TreeColor.copy(alpha = 0.45f), scale)
-                // Left pine
         drawPine(this, 50f, sideTop, groundY, 48f, 3, TreeColor, scale)
-        // Center pine (deeper color)
         drawPine(this, 100f, centerTop, groundY, 56f, 3, TreeDeepColor, scale)
-        // Right pine
         drawPine(this, 150f, sideTop, groundY, 48f, 3, TreeColor, scale)
     }
 }
@@ -70,8 +63,7 @@ private fun drawPine(
     val taper = 0.5f
 
     val path = Path()
-    
-    // Calculate points similar to pinePoints in JSX
+
     for (i in 0 until tiers) {
         val apexY = top + tierH * i
         val baseY = top + tierH * (i + 1) + ov
@@ -123,15 +115,13 @@ private fun drawWaterLine(
 ) {
     val path = Path()
     path.moveTo(-20f * scale, y * scale)
-    
-    // Cubic Bézier segments matching waterPath in JSX
     path.cubicTo(
         20f * scale, (y - amp) * scale,
         50f * scale, (y - amp) * scale,
         70f * scale, y * scale
     )
     path.cubicTo(
-        90f * scale, (y + amp) * scale, // Smooth curve S equivalent (approximated)
+        90f * scale, (y + amp) * scale,
         110f * scale, (y + amp) * scale,
         130f * scale, y * scale
     )

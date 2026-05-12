@@ -4,33 +4,28 @@ import cz.cvut.fel.android_app.domain.model.CapturedVelocityPoint
 import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
-import cz.cvut.fel.android_app.domain.repository.UserRepository
 
 class CompleteStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
-    private val userRepository: UserRepository,
     private val calculateUseCase: CalculateStreamSegmentUseCase
 ) {
 
     /**
-     * Finalizes the segment by saving it and its associated points to the database.
-     * Inputs (segmentWidth, depth) must be in SI units (meters).
+     * Handles completing and saving segment.
+     * @param segmentWidth width in meters
+     * @param depth depth in meters
      */
     suspend operator fun invoke(
         measurementId: Int,
         segmentWidth: Double,
         depth: Double,
-        points: List<CapturedVelocityPoint>,
-        selectedIndices: Set<Int>
+        points: List<CapturedVelocityPoint>
     ) {
-        // Determine the next segment number based on existing count
         val existingSegments = repository.getSegments(measurementId)
         val nextNumber = existingSegments.size + 1
 
-        // Get the final calculation (always works in Metric internally)
-        val result = calculateUseCase(segmentWidth, depth, points, selectedIndices)
+        val result = calculateUseCase(segmentWidth, depth, points)
 
-        // Map to the persistence model (StreamSegment) - always stored in meters
         val segment = StreamSegment(
             measurementId = measurementId,
             segmentNumber = nextNumber,
@@ -40,11 +35,9 @@ class CompleteStreamSegmentUseCase(
             segmentFlow = result.segmentFlow
         )
 
-        // Save the segment
         val segmentId = repository.insertSegment(segment).toInt()
 
-        // Save only the selected velocity points associated with this segment
-        result.selectedPoints.forEach { captured ->
+        points.forEach { captured ->
             val point = VelocityPoint(
                 segmentId = segmentId,
                 velocity = captured.velocity,

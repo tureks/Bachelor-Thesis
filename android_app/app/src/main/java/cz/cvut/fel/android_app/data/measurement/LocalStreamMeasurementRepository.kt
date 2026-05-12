@@ -65,20 +65,16 @@ class LocalStreamMeasurementRepository(
     override suspend fun deleteVelocityPoints(segmentId: Int) =
         velocityPointDao.deleteBySegmentId(segmentId)
 
-    override suspend fun setAsDraft(measurementId: Int) {
-        measurementDao.markOtherDraftsAsComplete(measurementId)
-        measurementDao.setAsDraft(measurementId)
-    }
 }
 
 private fun StreamMeasurementEntity.toDomain() = StreamMeasurement(
-    id, referenceModel, name, note, measureTimestamp,
-    gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, deviceId, status
+    id, name, note, measureTimestamp,
+    gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, status
 )
 
 private fun StreamMeasurement.toEntity() = StreamMeasurementEntity(
-    id, referenceModel, name, note, measureTimestamp,
-    gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, deviceId, status
+    id, name, note, measureTimestamp,
+    gpsLat, gpsLong, totalWidth, maxDepth, totalFlow, status
 )
 
 private fun StreamSegmentEntity.toDomain() =

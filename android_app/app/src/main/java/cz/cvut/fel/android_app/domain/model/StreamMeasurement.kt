@@ -2,7 +2,6 @@ package cz.cvut.fel.android_app.domain.model
 
 data class StreamMeasurement(
     val id: Int = 0,
-    val referenceModel: Int,
     val name: String,
     val note: String?,
     val measureTimestamp: Long,
@@ -11,6 +10,5 @@ data class StreamMeasurement(
     val totalWidth: Double?,
     val maxDepth: Double?,
     val totalFlow: Double?,
-    val deviceId: Int?,
     val status: StreamMeasurementStatus
 )

@@ -14,8 +14,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class UserUiState(
-    val profile: UserProfile? = null,
-    val isLoading: Boolean = true
+    val profile: UserProfile? = null
 )
 
 class UserViewModel(
@@ -28,7 +27,7 @@ class UserViewModel(
     init {
         userRepository.userProfile
             .onEach { profile ->
-                _uiState.update { it.copy(profile = profile, isLoading = false) }
+                _uiState.update { it.copy(profile = profile) }
             }
             .launchIn(viewModelScope)
     }

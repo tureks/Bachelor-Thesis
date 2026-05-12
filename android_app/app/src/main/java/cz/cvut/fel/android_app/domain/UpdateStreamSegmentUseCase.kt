@@ -4,17 +4,18 @@ import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.model.ValidationResult
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
-import cz.cvut.fel.android_app.domain.repository.UserRepository
 
 class UpdateStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
-    private val userRepository: UserRepository,
     private val validator: ValidateSegmentInputUseCase,
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase
 ) {
     /**
-     * Updates an existing segment and its points.
-     * All values (segment.segmentWidth, segment.depth) must be in SI units (meters).
+     * Validates, recalculates, and persists an edited segment and its velocity points.
+     * Refreshes the parent measurement totals.
+     * @param segment segment to update; [StreamSegment.segmentWidth] and [StreamSegment.depth] in meters
+     * @param updatedPoints replacement velocity points for the segment
+     * @return [ValidationResult.Success] or [ValidationResult.Error] with a human-readable message
      */
     suspend operator fun invoke(
         segment: StreamSegment,
@@ -46,7 +47,6 @@ class UpdateStreamSegmentUseCase(
             repository.insertVelocityPoint(point.copy(segmentId = segment.id))
         }
 
-        // Update the parent measurement summary
         val measurement = repository.getById(segment.measurementId)
         if (measurement != null) {
             val summary = getSummaryUseCase(segment.measurementId)

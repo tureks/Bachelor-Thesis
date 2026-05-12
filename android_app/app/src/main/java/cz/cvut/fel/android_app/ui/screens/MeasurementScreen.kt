@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
-import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -38,7 +37,6 @@ fun MeasurementScreen(
     var showCancelDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    // System back button follows the same logic as the top-bar back button
     BackHandler { onNavigateBack() }
 
     val segmentNumber = uiState.editingSegment?.segmentNumber ?: (uiState.segments.size + 1)

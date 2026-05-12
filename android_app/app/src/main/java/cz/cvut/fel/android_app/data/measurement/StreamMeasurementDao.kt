@@ -9,13 +9,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface StreamMeasurementDao {
-    @Query("SELECT id, reference_model, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE status = 'COMPLETE' ORDER BY measure_timestamp DESC")
+    @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE status = 'COMPLETE' ORDER BY measure_timestamp DESC")
     fun getCompleted(): Flow<List<StreamMeasurementEntity>>
 
-    @Query("SELECT id, reference_model, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE status = 'DRAFT' LIMIT 1")
+    @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE status = 'DRAFT' LIMIT 1")
     fun getDraftFlow(): Flow<StreamMeasurementEntity?>
 
-    @Query("SELECT id, reference_model, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE status = 'DRAFT' LIMIT 1")
+    @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE status = 'DRAFT' LIMIT 1")
     suspend fun getDraft(): StreamMeasurementEntity?
 
     @Query("DELETE FROM stream_measurement WHERE status = 'DRAFT'")
@@ -24,7 +24,7 @@ interface StreamMeasurementDao {
     @Query("DELETE FROM stream_measurement WHERE id = :id")
     suspend fun deleteById(id: Int)
 
-    @Query("SELECT id, reference_model, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, device_id, status FROM stream_measurement WHERE id = :id")
+    @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE id = :id")
     suspend fun getById(id: Int): StreamMeasurementEntity?
 
     @Insert
@@ -35,9 +35,4 @@ interface StreamMeasurementDao {
 
     @Delete
     suspend fun delete(measurement: StreamMeasurementEntity)
-    @Query("UPDATE stream_measurement SET status = 'DRAFT' WHERE id = :id")
-    suspend fun setAsDraft(id: Int)
-
-    @Query("UPDATE stream_measurement SET status = 'COMPLETE' WHERE id != :id AND status = 'DRAFT'")
-    suspend fun markOtherDraftsAsComplete(id: Int)
 }

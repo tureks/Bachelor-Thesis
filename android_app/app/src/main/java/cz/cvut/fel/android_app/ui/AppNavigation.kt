@@ -129,8 +129,7 @@ fun AppNavigation(
                 FinalizeMeasurementScreen(
                     viewModel = measurementViewModel,
                     onNavigateBack = { navController.safePopBackStack() },
-                    onComplete = navigateToMain,
-                    onNavigateToMain = navigateToMain
+                    onComplete = navigateToMain
                 )
             }
             composable(Screen.Device.route) {

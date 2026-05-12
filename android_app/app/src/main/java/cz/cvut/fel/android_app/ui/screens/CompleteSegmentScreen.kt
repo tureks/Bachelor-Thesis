@@ -22,7 +22,6 @@ import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
-import cz.cvut.fel.android_app.ui.components.base.SegmentNumberBadge
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.StreamMeasurementViewModel
@@ -191,9 +190,9 @@ fun CompleteSegmentScreen(
                         viewModel.completeSegment(
                             width.toDoubleOrNull() ?: 0.0,
                             depth.toDoubleOrNull() ?: 0.0,
-                            selectedPointIds
+                            selectedPointIds,
+                            onComplete = onNavigateToFinalize
                         )
-                        onNavigateToFinalize()
                     },
                     enabled = isValid,
                     modifier = Modifier
@@ -216,9 +215,9 @@ fun CompleteSegmentScreen(
                         viewModel.completeSegment(
                             width.toDoubleOrNull() ?: 0.0,
                             depth.toDoubleOrNull() ?: 0.0,
-                            selectedPointIds
+                            selectedPointIds,
+                            onComplete = onNavigateToMeasurement
                         )
-                        onNavigateToMeasurement()
                     },
                     enabled = isValid,
                     modifier = Modifier

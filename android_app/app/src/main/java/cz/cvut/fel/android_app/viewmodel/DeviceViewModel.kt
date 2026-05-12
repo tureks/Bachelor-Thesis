@@ -69,6 +69,10 @@ class DeviceViewModel(
         bleRepository.stopScanning()
     }
 
+    /**
+     * Connects to [device] or disconnects if it is already the active device.
+     * Handles disconnection and connection to other device when previously connected.
+     */
     fun toggleConnection(device: Device) {
         val currentState = _uiState.value.connectionState
         viewModelScope.launch {

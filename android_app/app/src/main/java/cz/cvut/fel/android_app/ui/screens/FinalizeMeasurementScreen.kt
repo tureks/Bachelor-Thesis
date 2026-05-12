@@ -22,8 +22,7 @@ import java.util.Locale
 fun FinalizeMeasurementScreen(
     viewModel: StreamMeasurementViewModel,
     onNavigateBack: () -> Unit,
-    onComplete: () -> Unit,
-    onNavigateToMain: () -> Unit
+    onComplete: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -68,7 +67,6 @@ fun FinalizeMeasurementScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Totals summary - Only show here
             if (totals != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -105,7 +103,6 @@ fun FinalizeMeasurementScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // GPS location card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -203,7 +200,7 @@ fun FinalizeMeasurementScreen(
             onDismiss = { showCancelDialog = false },
             onConfirm = {
                 viewModel.cancelMeasurement()
-                onNavigateToMain()
+                onComplete()
             }
         )
     }

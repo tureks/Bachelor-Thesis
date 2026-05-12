@@ -31,7 +31,6 @@ data class StreamMeasurementUiState(
     val currentVelocity: Double = 0.0,
     val isCapturing: Boolean = false,
     val captureProgress: Float = 0f,
-    val capturedPoints: List<CapturedVelocityPoint> = emptyList(),
     val currentLocation: Location? = null,
     val connectionState: BleConnectionState = BleConnectionState.Idle,
     val batteryLevel: Int = 0,
@@ -54,7 +53,6 @@ data class StreamMeasurementUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class StreamMeasurementViewModel(
     private val startMeasurementUseCase: StartStreamMeasurementUseCase,
-    private val captureSegmentUseCase: CaptureStreamSegmentUseCase,
     private val completeSegmentUseCase: CompleteStreamSegmentUseCase,
     private val completeMeasurementUseCase: CompleteStreamMeasurementUseCase,
     private val updateSegmentUseCase: UpdateStreamSegmentUseCase,
@@ -78,8 +76,7 @@ class StreamMeasurementViewModel(
 
     private data class CaptureState(
         val isCapturing: Boolean = false,
-        val progress: Float = 0f,
-        val points: List<CapturedVelocityPoint> = emptyList()
+        val progress: Float = 0f
     )
 
     private data class MeasurementData(
@@ -193,7 +190,6 @@ class StreamMeasurementViewModel(
             currentLocation = hardware.currentLocation,
             isCapturing = capture.isCapturing,
             captureProgress = capture.progress,
-            capturedPoints = capture.points,
             timeWindow = window,
             recentReadings = readings,
             windowAverage = windowAvg,
@@ -223,7 +219,6 @@ class StreamMeasurementViewModel(
         viewModelScope.launch {
             val points = measurementRepository.getVelocityPoints(segment.id)
             _editingPoints.value = points
-            // Populate manual points so they appear in Measurement and Complete screens
             _manualPoints.value = points.map { ManualVelocityPoint(it.id.toLong(), it.velocity, it.measureHeight ?: 0.0) }
             
             val unit = uiState.value.preferredUnit
@@ -243,6 +238,10 @@ class StreamMeasurementViewModel(
         _timeWindow.value = seconds
     }
 
+    /**
+     * Adds a manual velocity point using the current [windowAverage], capped to [VELOCITY_MAX],
+     * at the measurement height configured in the user profile ([_singlePointHeightPercent]).
+     */
     fun addManualPoint() {
         val avg = uiState.value.windowAverage
         val capped = minOf(avg, VELOCITY_MAX)
@@ -261,13 +260,13 @@ class StreamMeasurementViewModel(
 
     private var captureJob: Job? = null
 
+    /** Snapshots the current GPS location, then starts a new draft measurement and resets segment input state. */
     fun startNewMeasurement() {
         viewModelScope.launch {
             try {
                 val location = locationRepository.getCurrentLocation()
                 startMeasurementUseCase()
                 
-                // Update the newly created draft with location if available
                 measurementRepository.getDraft()?.let { draft ->
                     if (location != null) {
                         measurementRepository.update(draft.copy(
@@ -286,31 +285,39 @@ class StreamMeasurementViewModel(
         }
     }
 
+    /**
+     * Starts an automatic velocity capture session. Raw readings are collected in parallel with
+     * [CaptureStreamSegmentUseCase]; progress is reported as `readings.size / 100`. Once 100
+     * readings are accumulated, the session ends and their average is added as a manual point
+     * at the configured single-point height.
+     */
     fun startCapture() {
         if (_captureState.value.isCapturing) return
-        _captureState.update { it.copy(isCapturing = true, progress = 0f, points = emptyList()) }
-        
+        _captureState.update { it.copy(isCapturing = true, progress = 0f) }
+
         captureJob?.cancel()
         captureJob = viewModelScope.launch {
             val readings = mutableListOf<Double>()
-            val rawCollector = bleRepository.velocityReadings.onEach { readings.add(it) }.launchIn(this)
-
-            captureSegmentUseCase(bleRepository.velocityReadings).collect { stats ->
-                val progress = readings.size / 100f 
+            bleRepository.velocityReadings.collect { velocity ->
+                readings.add(velocity)
+                val progress = readings.size / 100f
                 _captureState.update { it.copy(progress = progress.coerceAtMost(1f)) }
-
                 if (progress >= 1f) {
-                    rawCollector.cancel()
-                    _captureState.update { it.copy(isCapturing = false, points = emptyList()) }
-                    val avg = readings.average()
-                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, height = _singlePointHeightPercent) }
-                    this.cancel()
+                    _captureState.update { it.copy(isCapturing = false) }
+                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), readings.average(), height = _singlePointHeightPercent) }
+                    cancel()
                 }
             }
         }
     }
 
-    fun completeSegment(width: Double, depth: Double, selectedPointIds: Set<Long>) {
+    /**
+     * Saves the current segment to the database asynchronously and invokes [onComplete] on success.
+     * @param width segment width in display units
+     * @param depth water depth in display units
+     * @param selectedPointIds IDs of [ManualVelocityPoint]s included in the velocity average
+     */
+    fun completeSegment(width: Double, depth: Double, selectedPointIds: Set<Long>, onComplete: () -> Unit = {}) {
         val measurementId = uiState.value.measurement?.id ?: return
         val editingSegment = uiState.value.editingSegment
         val points = uiState.value.manualPoints
@@ -344,13 +351,13 @@ class StreamMeasurementViewModel(
                         measurementId = measurementId,
                         segmentWidth = widthMetric,
                         depth = depthMetric,
-                        points = filteredPoints.map { CapturedVelocityPoint(it.velocity, it.height) },
-                        selectedIndices = filteredPoints.indices.toSet()
+                        points = filteredPoints.map { CapturedVelocityPoint(it.velocity, it.height) }
                     )
                     _manualPoints.value = emptyList()
                 }
                 _currentWidth.value = ""
                 _currentDepth.value = ""
+                onComplete()
             } catch (e: Exception) {
                 _error.value = e.message
             }
@@ -364,13 +371,15 @@ class StreamMeasurementViewModel(
                 if (result is ValidationResult.Error) {
                     _error.value = result.message
                 }
-                // Segments update reactively via measurementDataFlow
             } catch (e: Exception) {
                 _error.value = e.message ?: "Update failed"
             }
         }
     }
 
+    /**
+     * Finalizes the active draft measurement. Attempts to fetch fresh GPS fix and uses it.
+     */
     fun finalizeMeasurement(name: String, notes: String) {
         val measurement = uiState.value.measurement ?: return
         
@@ -415,16 +424,13 @@ class StreamMeasurementViewModel(
 
                 StreamMeasurementViewModel(
                     startMeasurementUseCase = StartStreamMeasurementUseCase(app.measurementRepository),
-                    captureSegmentUseCase = CaptureStreamSegmentUseCase(),
                     completeSegmentUseCase = CompleteStreamSegmentUseCase(
-                        app.measurementRepository, 
-                        app.userRepository,
+                        app.measurementRepository,
                         CalculateStreamSegmentUseCase()
                     ),
                     completeMeasurementUseCase = CompleteStreamMeasurementUseCase(app.measurementRepository, summaryUseCase),
                     updateSegmentUseCase = UpdateStreamSegmentUseCase(
                         app.measurementRepository,
-                        app.userRepository,
                         validator,
                         summaryUseCase
                     ),

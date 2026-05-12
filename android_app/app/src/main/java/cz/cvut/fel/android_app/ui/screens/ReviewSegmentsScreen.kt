@@ -29,7 +29,6 @@ fun ReviewSegmentsScreen(
     var showCancelDialog by remember { mutableStateOf(false) }
     val unit = uiState.preferredUnit
 
-    // System back button follows the same logic as the top-bar back button
     BackHandler { onNavigateBack() }
 
     Scaffold(

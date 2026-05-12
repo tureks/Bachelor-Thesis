@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import cz.cvut.fel.android_app.R
 import cz.cvut.fel.android_app.ui.components.ExportShareConfig
 import cz.cvut.fel.android_app.ui.components.ExportShareEffect
+import cz.cvut.fel.android_app.ui.components.SaveToDeviceEffect
 import cz.cvut.fel.android_app.ui.components.base.AppSearchBar
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.FromDatePickerDialog
@@ -79,6 +81,20 @@ fun HistoryScreen(
         onDone = { viewModel.clearExportContent() }
     )
 
+    val downloadConfig = uiState.downloadContent?.let { content ->
+        ExportShareConfig(
+            content = content,
+            measurementNames = uiState.exportedMeasurementNames,
+            userEmail = uiState.userEmail,
+            operatorName = uiState.operatorName
+        )
+    }
+    SaveToDeviceEffect(
+        config = downloadConfig,
+        snackbarHostState = snackbarHostState,
+        onDone = { viewModel.clearDownloadContent() }
+    )
+
     var showDatePicker by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -95,6 +111,9 @@ fun HistoryScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = viewModel::downloadSelected) {
+                            Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.export_save_to_device))
+                        }
                         IconButton(onClick = viewModel::exportSelected) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_export))
                         }

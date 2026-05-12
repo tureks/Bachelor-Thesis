@@ -61,7 +61,6 @@ fun MeasurementItem(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                // Title row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

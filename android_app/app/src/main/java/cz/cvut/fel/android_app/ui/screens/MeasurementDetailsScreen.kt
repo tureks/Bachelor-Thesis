@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import cz.cvut.fel.android_app.R
 import cz.cvut.fel.android_app.ui.components.ExportShareConfig
 import cz.cvut.fel.android_app.ui.components.ExportShareEffect
+import cz.cvut.fel.android_app.ui.components.SaveToDeviceEffect
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditMeasurementMetadataDialog
@@ -63,6 +65,20 @@ fun MeasurementDetailsScreen(
         onDone = { viewModel.clearExportContent() }
     )
 
+    val downloadConfig = uiState.downloadContent?.let { content ->
+        ExportShareConfig(
+            content = content,
+            measurementNames = uiState.exportedMeasurementNames,
+            userEmail = uiState.userEmail,
+            operatorName = uiState.operatorName
+        )
+    }
+    SaveToDeviceEffect(
+        config = downloadConfig,
+        snackbarHostState = snackbarHostState,
+        onDone = { viewModel.clearDownloadContent() }
+    )
+
     var showEditMetadataDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -73,6 +89,9 @@ fun MeasurementDetailsScreen(
                 title = stringResource(R.string.screen_measurement_details),
                 onNavigateBack = onNavigateBack,
                 actions = {
+                    IconButton(onClick = { viewModel.downloadMeasurement() }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.export_save_to_device))
+                    }
                     IconButton(onClick = { viewModel.exportMeasurement() }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_export))
                     }

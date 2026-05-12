@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 private const val PAGE_SIZE = 6
 
-data class DateRange(val from: Long? = null, val to: Long? = null) {
+data class DateRange(val from: Long? = null) {
     val isActive: Boolean get() = from != null
 }
 
@@ -31,6 +31,7 @@ data class HistoryUiState(
     val selectedIds: Set<Int> = emptySet(),
     val isExporting: Boolean = false,
     val exportContent: String? = null,
+    val downloadContent: String? = null,
     val exportedMeasurementNames: List<String> = emptyList(),
     val userEmail: String = "",
     val operatorName: String = "",
@@ -52,6 +53,14 @@ class HistoryViewModel(
         val userEmail: String = "",
         val operatorName: String = ""
     )
+    private data class SelectionState(
+        val selectedIds: Set<Int>,
+        val isExporting: Boolean,
+        val exportContent: String?,
+        val downloadContent: String?,
+        val exportMeta: ExportMeta,
+        val error: String?
+    )
 
     private val _searchQuery = MutableStateFlow("")
     private val _dateRange = MutableStateFlow(DateRange())
@@ -59,6 +68,7 @@ class HistoryViewModel(
     private val _selectedIds = MutableStateFlow<Set<Int>>(emptySet())
     private val _isExporting = MutableStateFlow(false)
     private val _exportContent = MutableStateFlow<String?>(null)
+    private val _downloadContent = MutableStateFlow<String?>(null)
     private val _exportMeta = MutableStateFlow(ExportMeta())
     private val _error = MutableStateFlow<String?>(null)
 
@@ -67,19 +77,21 @@ class HistoryViewModel(
             .flatMapLatest { params ->
                 searchMeasurementsUseCase(
                     query = params.query,
-                    fromTimestamp = params.dateRange.from,
-                    toTimestamp = params.dateRange.to
+                    fromTimestamp = params.dateRange.from
                 )
             }
 
     val uiState: StateFlow<HistoryUiState> = combine(
         allMeasurementsFlow,
         combine(_searchQuery, _dateRange, _displayCount) { q, d, c -> Triple(q, d, c) },
-        combine(_selectedIds, _isExporting, _exportContent, _exportMeta, _error) { a, b, c, d, e ->
-            object {
-                val selectedIds = a; val isExporting = b; val exportContent = c
-                val exportMeta = d; val error = e
-            }
+        combine(
+            _selectedIds,
+            _isExporting,
+            combine(_exportContent, _downloadContent) { e, d -> Pair(e, d) },
+            _exportMeta,
+            _error
+        ) { ids, exporting, (exportContent, downloadContent), meta, err ->
+            SelectionState(ids, exporting, exportContent, downloadContent, meta, err)
         },
         userRepository.userProfile
             .map { it?.preferredUnit ?: MeasurementUnit.HYDROMETRIC }
@@ -95,6 +107,7 @@ class HistoryViewModel(
             selectedIds = extra.selectedIds,
             isExporting = extra.isExporting,
             exportContent = extra.exportContent,
+            downloadContent = extra.downloadContent,
             exportedMeasurementNames = extra.exportMeta.names,
             userEmail = extra.exportMeta.userEmail,
             operatorName = extra.exportMeta.operatorName,
@@ -113,7 +126,7 @@ class HistoryViewModel(
     }
 
     fun setFromDate(from: Long?) {
-        _dateRange.value = DateRange(from = from, to = null)
+        _dateRange.value = DateRange(from = from)
         _displayCount.value = PAGE_SIZE
     }
 
@@ -156,17 +169,20 @@ class HistoryViewModel(
         }
     }
 
-    fun exportMeasurement(measurement: StreamMeasurement) {
+    fun downloadSelected() {
+        val ids = _selectedIds.value.toList()
+        if (ids.isEmpty()) return
         viewModelScope.launch {
             _isExporting.value = true
             try {
                 val profile = userRepository.userProfile.first()
+                val names = uiState.value.measurements.filter { it.id in ids }.map { it.name }
                 _exportMeta.value = ExportMeta(
-                    names = listOf(measurement.name),
+                    names = names,
                     userEmail = profile?.email ?: "",
                     operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
                 )
-                _exportContent.value = exportStreamMeasurementUseCase(measurement.id)
+                _downloadContent.value = exportStreamMeasurementUseCase(ids)
             } catch (e: Exception) {
                 _error.value = "Export failed: ${e.message}"
             } finally {
@@ -187,6 +203,11 @@ class HistoryViewModel(
 
     fun clearExportContent() {
         _exportContent.value = null
+        _exportMeta.value = ExportMeta()
+    }
+
+    fun clearDownloadContent() {
+        _downloadContent.value = null
         _exportMeta.value = ExportMeta()
     }
 

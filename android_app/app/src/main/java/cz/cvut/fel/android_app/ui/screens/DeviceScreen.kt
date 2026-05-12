@@ -95,7 +95,6 @@ fun DeviceScreen(
                 }
 
                 else -> {
-                    // Connection status banner
                     val connectedAddress = (uiState.connectionState as? BleConnectionState.Connected)?.deviceAddress
                     if (connectedAddress != null) {
                         item {
@@ -129,7 +128,6 @@ fun DeviceScreen(
                         item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
                     }
 
-                    // Scan header
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -153,7 +151,6 @@ fun DeviceScreen(
                         }
                     }
 
-                    // Scanning indicator
                     if (uiState.isScanning && uiState.scannedDevices.isEmpty()) {
                         item {
                             Row(
@@ -176,7 +173,6 @@ fun DeviceScreen(
                         }
                     }
 
-                    // No results after scan
                     if (!uiState.isScanning && uiState.hasScanned && uiState.scannedDevices.isEmpty()) {
                         item {
                             Text(
@@ -198,7 +194,6 @@ fun DeviceScreen(
                 }
             }
 
-            // Error card — always rendered at the bottom when present
             uiState.error?.let { error ->
                 item {
                     Card(

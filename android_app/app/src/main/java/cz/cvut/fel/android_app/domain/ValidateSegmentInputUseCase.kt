@@ -6,11 +6,11 @@ class ValidateSegmentInputUseCase {
 
     /**
      * Validates hydrological segment input parameters.
-     * 
      * @param width Segment width in meters.
      * @param depth Segment depth in meters.
      * @param velocity Average velocity in m/s.
-     * @param height Ratio of depth (e.g., 0.6). Optional.
+     * @param height Measurement height as a ratio of depth (0.0–1.0)
+     * @return [ValidationResult.Success] or [ValidationResult.Error] with a human-readable message.
      */
     operator fun invoke(
         width: Double,

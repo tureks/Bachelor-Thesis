@@ -56,12 +56,13 @@ class AndroidLocationRepository(
             return@suspendCancellableCoroutine
         }
 
-        client.lastLocation.addOnSuccessListener { location ->
-            continuation.resume(location?.let { Location(it.latitude, it.longitude, it.accuracy) })
-        }
-        client.lastLocation.addOnFailureListener {
-            continuation.resume(null)
-        }
+        client.lastLocation
+            .addOnSuccessListener { location ->
+                continuation.resume(location?.let { Location(it.latitude, it.longitude, it.accuracy) })
+            }
+            .addOnFailureListener {
+                continuation.resume(null)
+            }
     }
 
     private fun hasLocationEnabled(): Boolean {

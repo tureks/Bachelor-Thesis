@@ -50,7 +50,6 @@ fun VelocityGraph(
 
         val startTime = now - windowMillis
 
-        // Background and axes
         drawRect(
             color = outlineColor.copy(alpha = 0.05f),
             topLeft = Offset(leftPadding, topPadding),
@@ -59,7 +58,6 @@ fun VelocityGraph(
         drawLine(color = outlineColor, start = Offset(leftPadding, topPadding), end = Offset(leftPadding, graphHeight + topPadding), strokeWidth = 0.5.dp.toPx())
         drawLine(color = outlineColor, start = Offset(leftPadding, graphHeight + topPadding), end = Offset(size.width - rightPadding, graphHeight + topPadding), strokeWidth = 0.5.dp.toPx())
 
-        // Y auto-zoom from visible readings
         val visibleReadings = readings.filter { it.timestamp >= startTime }
         val maxV = (visibleReadings.maxOfOrNull { it.velocity } ?: 1.0).coerceAtLeast(0.1)
         val minV = (visibleReadings.minOfOrNull { it.velocity } ?: 0.0).coerceAtLeast(0.0)
@@ -68,7 +66,6 @@ fun VelocityGraph(
         val yMax = maxV + yPadding
         val yMin = (minV - yPadding).coerceAtLeast(0.0)
 
-        // Y labels
         val topLabel = textMeasurer.measure(String.format(Locale.US, "%.1f", yMax), style = textStyle)
         drawText(topLabel, topLeft = Offset(leftPadding - topLabel.size.width - 6f, topPadding))
 
@@ -78,7 +75,6 @@ fun VelocityGraph(
         val bottomLabel = textMeasurer.measure(String.format(Locale.US, "%.1f", yMin), style = textStyle)
         drawText(bottomLabel, topLeft = Offset(leftPadding - bottomLabel.size.width - 6f, topPadding + graphHeight - bottomLabel.size.height))
 
-        // X labels — fixed window span to avoid label-width jitter
         val startLabel = textMeasurer.measure("0s", style = textStyle)
         drawText(startLabel, topLeft = Offset(leftPadding, topPadding + graphHeight + 4.dp.toPx()))
 

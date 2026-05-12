@@ -37,6 +37,7 @@ data class MeasurementDetailUiState(
     val editingPoints: List<VelocityPoint> = emptyList(),
     val preferredUnit: MeasurementUnit = MeasurementUnit.HYDROMETRIC,
     val exportContent: String? = null,
+    val downloadContent: String? = null,
     val exportedMeasurementNames: List<String> = emptyList(),
     val userEmail: String = "",
     val operatorName: String = "",
@@ -61,6 +62,7 @@ class MeasurementDetailViewModel(
 
     private data class ExportState(
         val content: String? = null,
+        val downloadContent: String? = null,
         val names: List<String> = emptyList(),
         val userEmail: String = "",
         val operatorName: String = ""
@@ -89,6 +91,7 @@ class MeasurementDetailViewModel(
             editingPoints = content.editingPoints,
             preferredUnit = unit,
             exportContent = export.content,
+            downloadContent = export.downloadContent,
             exportedMeasurementNames = export.names,
             userEmail = export.userEmail,
             operatorName = export.operatorName,
@@ -152,7 +155,7 @@ class MeasurementDetailViewModel(
         val id = _content.value.measurement?.id ?: return
         viewModelScope.launch {
             try {
-                updateMeasurementUseCase(id, name, note)
+                updateMeasurementUseCase(id, name, note.ifBlank { null })
                 _content.update { it.copy(measurement = measurementRepository.getById(id)) }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Update failed"
@@ -175,6 +178,27 @@ class MeasurementDetailViewModel(
                 _error.value = "Export failed: ${e.message ?: "Unknown error"}"
             }
         }
+    }
+
+    fun downloadMeasurement() {
+        val measurement = _content.value.measurement ?: return
+        viewModelScope.launch {
+            try {
+                val profile = userRepository.userProfile.first()
+                _export.value = ExportState(
+                    names = listOf(measurement.name),
+                    userEmail = profile?.email ?: "",
+                    operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
+                )
+                _export.update { it.copy(downloadContent = exportUseCase(measurement.id)) }
+            } catch (e: Exception) {
+                _error.value = "Export failed: ${e.message ?: "Unknown error"}"
+            }
+        }
+    }
+
+    fun clearDownloadContent() {
+        _export.update { it.copy(downloadContent = null) }
     }
 
     fun deleteMeasurement(onDeleted: () -> Unit) {
@@ -212,7 +236,6 @@ class MeasurementDetailViewModel(
                     ),
                     updateSegmentUseCase = UpdateStreamSegmentUseCase(
                         app.measurementRepository,
-                        app.userRepository,
                         validator,
                         summaryUseCase
                     ),

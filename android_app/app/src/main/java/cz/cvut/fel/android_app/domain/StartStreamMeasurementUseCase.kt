@@ -11,14 +11,11 @@ class StartStreamMeasurementUseCase(
      * Deletes any existing draft and starts a new measurement.
      */
     suspend operator fun invoke(name: String = "New Measurement"): Long {
-        // Delete existing draft if any
         repository.getDraft()?.let {
             repository.delete(it)
         }
 
-        // Create a new draft
         val newMeasurement = StreamMeasurement(
-            referenceModel = 0,
             name = name,
             note = null,
             measureTimestamp = System.currentTimeMillis(),
@@ -27,7 +24,6 @@ class StartStreamMeasurementUseCase(
             totalWidth = null,
             maxDepth = null,
             totalFlow = null,
-            deviceId = null,
             status = StreamMeasurementStatus.DRAFT
         )
 

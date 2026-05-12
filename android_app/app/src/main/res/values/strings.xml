@@ -128,6 +128,10 @@
     <!-- Export -->
     <string name="export_no_email_app">No email app found</string>
     <string name="export_chooser_title">Send Report via Email</string>
+    <string name="export_title">Export Report</string>
+    <string name="export_share_email">Share via Email</string>
+    <string name="export_save_to_device">Save to Downloads</string>
+    <string name="export_saved_to_downloads">Saved to Downloads: %1$s</string>
 
     <!-- Errors -->
     <string name="error_no_velocity_data">No velocity data captured.</string>

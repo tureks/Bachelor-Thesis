@@ -73,8 +73,9 @@ class LocalBleRepository(
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 val exception = when (status) {
-                    8 -> BleException.ConnectionTimeout
-                    133 -> BleException.DeviceNotFound
+                    GATT_ERROR_TIMEOUT -> BleException.ConnectionTimeout
+                    GATT_CONN_TERMINATE_PEER_USER -> BleException.DeviceTurnedOff
+                    GATT_ERROR_DEVICE_NOT_FOUND -> BleException.DeviceNotFound
                     else -> BleException.Unknown(status)
                 }
                 _connectionState.value = BleConnectionState.Error(exception)
@@ -120,6 +121,11 @@ class LocalBleRepository(
             subscribeNext(gatt)
         }
 
+        /**
+         * Called when all CCCD subscriptions are established.
+         * Get initial battery reading.
+         * Save the device into the database.
+         */
         private fun finishConnection(gatt: BluetoothGatt) {
             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
             _connectionState.value = BleConnectionState.Connected(gatt.device.address)
@@ -160,7 +166,6 @@ class LocalBleRepository(
             when (uuid) {
                 BATTERY_LEVEL_CHAR_UUID -> {
                     parseAndEmitBattery(value)
-                    // Chain: after battery, read status
                     gatt.getService(SERVICE_UUID)?.getCharacteristic(STATUS_CHAR_UUID)
                         ?.let { gatt.readCharacteristic(it) }
                 }
@@ -177,6 +182,12 @@ class LocalBleRepository(
             handleCharacteristicChanged(characteristic.uuid, value)
         }
 
+        /**
+         * Processes the next entry in [subscribeQueue] and returns immediately so the
+         * next call is triggered by [onDescriptorWrite] once the CCCD write completes.
+         * Missing optional characteristics (battery, status) are skipped; a missing
+         * velocity characteristic is fatal.
+         */
         private fun subscribeNext(gatt: BluetoothGatt) {
             while (subscribeQueue.isNotEmpty()) {
                 val (serviceUuid, charUuid) = subscribeQueue.removeFirst()
@@ -194,6 +205,12 @@ class LocalBleRepository(
         }
     }
 
+    /**
+     * Writes [BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE] to the CCCD of [characteristic].
+     * Uses the API 33+ non-deprecated overload when available.
+     * @return `true` if the write was initiated (caller should wait for [BluetoothGattCallback.onDescriptorWrite]),
+     *         `false` if no CCCD descriptor was found on this characteristic.
+     */
     private fun tryEnableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic): Boolean {
         gatt.setCharacteristicNotification(characteristic, true)
         val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: return false
@@ -238,22 +255,29 @@ class LocalBleRepository(
 
     override fun isBluetoothEnabled(): Boolean = bluetoothAdapter.isEnabled
 
+    /** Decodes a UTF-8 decimal string from the velocity characteristic and emits it. */
     private fun parseAndEmitVelocity(bytes: ByteArray) {
         val value = bytes.toString(Charsets.UTF_8).trim().toDoubleOrNull() ?: return
         scope.launch { _velocityReadings.emit(value) }
     }
 
+    /** Decodes the standard BLE Battery Level characteristic. */
     private fun parseAndEmitBattery(bytes: ByteArray) {
         if (bytes.isEmpty()) return
         _batteryLevel.value = bytes[0].toInt() and 0xFF
     }
 
+    /** Decodes the custom status characteristic. */
     private fun parseAndEmitStatus(bytes: ByteArray) {
         if (bytes.isEmpty()) return
         _probeConnected.value = bytes[0].toInt() != 0
     }
 
     companion object {
+        private const val GATT_ERROR_TIMEOUT = 8
+        private const val GATT_CONN_TERMINATE_PEER_USER = 19
+        private const val GATT_ERROR_DEVICE_NOT_FOUND = 133
+
         private val SERVICE_UUID: UUID = UUID.fromString("a177eaf2-c661-4f76-b07d-36826eca67bd")
         private val VELOCITY_CHAR_UUID: UUID = UUID.fromString("0f6866f4-8a14-43a9-b7e4-93075f456d5c")
         private val STATUS_CHAR_UUID: UUID = UUID.fromString("736f5af6-85ef-4619-bbae-0c3fe441e2e4")

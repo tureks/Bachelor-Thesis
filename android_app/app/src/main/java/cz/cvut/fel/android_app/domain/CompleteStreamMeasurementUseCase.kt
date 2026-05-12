@@ -8,8 +8,9 @@ class CompleteStreamMeasurementUseCase(
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase
 ) {
     /**
-     * Finalizes the entire stream measurement session.
-     * name: The primary identifier (e.g. Station Name, River, or Location).
+     * Finalizes the measurement by computing totals.
+     * Sets status to COMPLETE.
+     * @param name name of the measurement
      */
     suspend operator fun invoke(
         measurementId: Int,

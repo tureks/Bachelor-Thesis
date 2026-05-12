@@ -14,9 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.ui.components.base.AppButton
@@ -39,12 +36,8 @@ fun MainScreen(
     val isConnected = uiState.connectionState is BleConnectionState.Connected
     val isProbeConnected = uiState.probeConnected
     var showOverwriteDialog by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
 
     Scaffold(
-        modifier = Modifier.pointerInput(Unit) {
-            detectTapGestures(onTap = { focusManager.clearFocus() })
-        },
         topBar = {
             AppTopBar(
                 title = "Stream Measurement",
@@ -100,7 +93,6 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Alert banner pinned to top
             if (!isConnected) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -145,7 +137,6 @@ fun MainScreen(
                 }
             }
 
-            // Buttons centered in remaining space
             Box(
                 modifier = Modifier
                     .fillMaxSize()

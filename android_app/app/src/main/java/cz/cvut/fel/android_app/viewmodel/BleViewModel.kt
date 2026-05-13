@@ -59,8 +59,9 @@ class BleViewModel(private val bleRepository: BleRepository) : ViewModel() {
     private val windowAverageFlow: Flow<Double> = combine(recentReadingsFlow, _timeWindow) { readings, window ->
         val now = System.currentTimeMillis()
         val windowStart = now - window * 1000L
-        val windowed = readings.filter { it.timestamp >= windowStart && it.velocity > 0.0 }
-        if (windowed.isEmpty()) 0.0 else windowed.map { it.velocity }.average()
+        val windowed = readings.filter { it.timestamp >= windowStart }
+        val startIdx = windowed.indexOfFirst { it.velocity > 0.0 }
+        if (startIdx == -1) 0.0 else windowed.drop(startIdx).map { it.velocity }.average()
     }
         .sample(1200L)
         .distinctUntilChanged()
@@ -74,7 +75,8 @@ class BleViewModel(private val bleRepository: BleRepository) : ViewModel() {
     ) { hardware, readings, window, avg ->
         val windowStart = System.currentTimeMillis() - window * 1000L
         val liveReadings = readings.filter { it.timestamp >= windowStart }
-        val validReadings = liveReadings.filter { it.velocity > 0.0 }
+        val startIdx = liveReadings.indexOfFirst { it.velocity > 0.0 }
+        val averagingReadings = if (startIdx == -1) emptyList() else liveReadings.drop(startIdx)
         BleUiState(
             connectionState = hardware.connectionState,
             batteryLevel = hardware.batteryLevel,
@@ -82,8 +84,8 @@ class BleViewModel(private val bleRepository: BleRepository) : ViewModel() {
             currentVelocity = hardware.velocity,
             timeWindow = window,
             windowAverage = avg,
-            windowMin = validReadings.minOfOrNull { it.velocity } ?: 0.0,
-            windowMax = validReadings.maxOfOrNull { it.velocity } ?: 0.0,
+            windowMin = averagingReadings.minOfOrNull { it.velocity } ?: 0.0,
+            windowMax = averagingReadings.maxOfOrNull { it.velocity } ?: 0.0,
             recentReadings = liveReadings,
             velocityOverLimit = hardware.velocity > VELOCITY_MAX
         )

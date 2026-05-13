@@ -22,7 +22,7 @@
     <string name="screen_history">Measurement History</string>
     <string name="screen_connect_device">Connect Device</string>
     <string name="screen_settings">Settings</string>
-    <string name="screen_measurement_details">Measurement Details</string>
+    <string name="screen_measurement_details">Details</string>
 
     <!-- Main screen -->
     <string name="btn_new_measurement">New Measurement</string>

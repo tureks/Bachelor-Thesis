@@ -13,6 +13,8 @@ interface BleRepository {
     val probeConnected: Flow<Boolean>
     val scannedDevices: Flow<List<Device>>
 
+    /** Clears the scanned device list without starting a scan. */
+    fun clearScannedDevices()
     /** Clears the scanned device list and starts a new BLE scan. */
     fun startScanning()
     /** Stops the ongoing BLE scan. */

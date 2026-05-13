@@ -34,6 +34,8 @@ class DeviceViewModel(
     val uiState: StateFlow<DeviceUiState> = _uiState.asStateFlow()
 
     init {
+        bleRepository.clearScannedDevices()
+
         bleRepository.scannedDevices
             .onEach { devices -> _uiState.update { it.copy(scannedDevices = devices) } }
             .launchIn(viewModelScope)

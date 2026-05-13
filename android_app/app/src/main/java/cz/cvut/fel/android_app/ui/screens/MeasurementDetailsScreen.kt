@@ -95,16 +95,6 @@ fun MeasurementDetailsScreen(
                     IconButton(onClick = { viewModel.exportMeasurement() }) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.action_export))
                     }
-                    IconButton(onClick = { showEditMetadataDialog = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.action_delete),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
                 }
             )
         }
@@ -120,10 +110,26 @@ fun MeasurementDetailsScreen(
                     .padding(Dimens.paddingM)
                     .fillMaxSize()
             ) {
-                Text(
-                    text = measurement.name,
-                    style = MaterialTheme.typography.headlineMedium
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = measurement.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { showEditMetadataDialog = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.action_delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
                 Text(
                     text = dateFormat.format(Date(measurement.measureTimestamp)),
                     style = MaterialTheme.typography.bodyMedium,

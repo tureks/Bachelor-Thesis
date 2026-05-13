@@ -244,6 +244,10 @@ class LocalBleRepository(
         gatt?.disconnect()
     }
 
+    override fun clearScannedDevices() {
+        _scannedDevices.value = emptyList()
+    }
+
     override fun startScanning() {
         _scannedDevices.value = emptyList()
         bluetoothAdapter.bluetoothLeScanner?.startScan(scanCallback)

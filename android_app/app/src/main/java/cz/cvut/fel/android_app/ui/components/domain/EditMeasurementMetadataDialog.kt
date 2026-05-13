@@ -25,7 +25,7 @@ fun EditMeasurementMetadataDialog(
                 AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = "Location Name",
+                    label = "Name",
                     modifier = Modifier.fillMaxWidth()
                 )
                 AppTextField(

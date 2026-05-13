@@ -88,6 +88,9 @@ class MeasurementViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MeasurementUiState())
 
     init {
+        viewModelScope.launch {
+            _currentLocation.value = locationRepository.getCurrentLocation()
+        }
         locationRepository.observeLocation()
             .onEach { _currentLocation.value = it }
             .launchIn(viewModelScope)

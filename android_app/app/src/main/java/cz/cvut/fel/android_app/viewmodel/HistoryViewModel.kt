@@ -172,7 +172,7 @@ class HistoryViewModel(
     private suspend fun generateExportContent(ids: List<Int>): String {
         val profile = userRepository.userProfile.first()
         val unit = uiState.value.preferredUnit
-        val names = uiState.value.measurements.filter { it.id in ids }.map { it.name }
+        val names = ids.mapNotNull { measurementRepository.getById(it)?.name }
         val operatorName = "${profile?.firstName ?: ""} ${profile?.lastName ?: ""}".trim()
         val email = profile?.email ?: ""
         _exportMeta.value = ExportMeta(names = names, userEmail = email, operatorName = operatorName)

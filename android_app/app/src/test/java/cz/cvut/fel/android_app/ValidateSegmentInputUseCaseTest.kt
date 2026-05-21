@@ -17,85 +17,85 @@ class ValidateSegmentInputUseCaseTest {
     }
 
     @Test
-    fun invoke_validInputs_returnsSuccess() {
+    fun validInputs_returnsSuccess_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0)
         assertEquals(ValidationResult.Success, result)
     }
 
     @Test
-    fun invoke_validInputsWithHeight_returnsSuccess() {
+    fun validInputsWithHeight_returnsSuccess_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = 0.6)
         assertEquals(ValidationResult.Success, result)
     }
 
     @Test
-    fun invoke_velocityAtMaxBoundary_returnsSuccess() {
+    fun velocityAtMaxBoundary_returnsSuccess_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 5.0)
         assertEquals(ValidationResult.Success, result)
     }
 
     @Test
-    fun invoke_velocityZero_returnsSuccess() {
+    fun velocityZero_returnsSuccess_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 0.0)
         assertEquals(ValidationResult.Success, result)
     }
 
     @Test
-    fun invoke_heightAtBoundaries_returnsSuccess() {
+    fun heightAtBoundaries_returnsSuccess_test() {
         assertEquals(ValidationResult.Success, useCase(1.0, 0.5, 1.0, height = 0.0))
         assertEquals(ValidationResult.Success, useCase(1.0, 0.5, 1.0, height = 1.0))
     }
 
     @Test
-    fun invoke_widthZero_returnsError() {
+    fun widthZero_returnsError_test() {
         val result = useCase(width = 0.0, depth = 0.5, velocity = 1.0)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_widthNegative_returnsError() {
+    fun widthNegative_returnsError_test() {
         val result = useCase(width = -1.0, depth = 0.5, velocity = 1.0)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_depthZero_returnsError() {
+    fun depthZero_returnsError_test() {
         val result = useCase(width = 1.0, depth = 0.0, velocity = 1.0)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_depthNegative_returnsError() {
+    fun depthNegative_returnsError_test() {
         val result = useCase(width = 1.0, depth = -0.1, velocity = 1.0)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_velocityNegative_returnsError() {
+    fun velocityNegative_returnsError_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = -0.001)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_velocityAboveLimit_returnsError() {
+    fun velocityAboveLimit_returnsError_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 5.001)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_heightBelowZero_returnsError() {
+    fun heightBelowZero_returnsError_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = -0.01)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_heightAboveOne_returnsError() {
+    fun heightAboveOne_returnsError_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = 1.01)
         assertTrue(result is ValidationResult.Error)
     }
 
     @Test
-    fun invoke_heightNull_ignored() {
+    fun heightNull_ignored_test() {
         val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = null)
         assertEquals(ValidationResult.Success, result)
     }

@@ -17,7 +17,9 @@ import cz.cvut.fel.android_app.R
 import cz.cvut.fel.android_app.ui.components.ExportShareConfig
 import cz.cvut.fel.android_app.ui.components.ExportShareEffect
 import cz.cvut.fel.android_app.ui.components.SaveToDeviceEffect
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.DeleteConfirmationDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditMeasurementMetadataDialog
 import cz.cvut.fel.android_app.ui.components.domain.EditSegmentDialog
@@ -46,7 +48,7 @@ fun MeasurementDetailsScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showError(it)
             viewModel.clearError()
         }
     }
@@ -82,8 +84,8 @@ fun MeasurementDetailsScreen(
     var showEditMetadataDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.screen_measurement_details),
@@ -190,6 +192,12 @@ fun MeasurementDetailsScreen(
             }
         }
     }
+
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } 
 
     uiState.editingSegment?.let { segment ->
         EditSegmentDialog(

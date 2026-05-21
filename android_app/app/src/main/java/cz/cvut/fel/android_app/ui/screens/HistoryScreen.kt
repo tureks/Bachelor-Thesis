@@ -25,8 +25,10 @@ import cz.cvut.fel.android_app.R
 import cz.cvut.fel.android_app.ui.components.ExportShareConfig
 import cz.cvut.fel.android_app.ui.components.ExportShareEffect
 import cz.cvut.fel.android_app.ui.components.SaveToDeviceEffect
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppSearchBar
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.FromDatePickerDialog
 import cz.cvut.fel.android_app.ui.components.domain.MeasurementItem
 import cz.cvut.fel.android_app.ui.theme.Dimens
@@ -62,7 +64,7 @@ fun HistoryScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showError(it)
             viewModel.clearError()
         }
     }
@@ -97,6 +99,7 @@ fun HistoryScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -126,7 +129,6 @@ fun HistoryScreen(
                 )
             }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -197,6 +199,12 @@ fun HistoryScreen(
         }
     }
 
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } 
+
     if (showDatePicker) {
         FromDatePickerDialog(
             initialDate = uiState.dateRange.from,
@@ -207,7 +215,6 @@ fun HistoryScreen(
             }
         )
     }
-
 }
 
 @Composable

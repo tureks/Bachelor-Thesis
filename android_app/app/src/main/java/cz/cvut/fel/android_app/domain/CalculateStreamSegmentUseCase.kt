@@ -21,7 +21,6 @@ class CalculateStreamSegmentUseCase {
             points.sumOf { it.velocity } / points.size
         }
 
-        // Mid-section method: Q = V_avg × width × depth
         val segmentFlow = averageVelocity * segmentWidth * depth
 
         return StreamSegmentResult(

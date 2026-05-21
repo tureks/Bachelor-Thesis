@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import cz.cvut.fel.android_app.R
+import cz.cvut.fel.android_app.ui.components.base.showError
+import cz.cvut.fel.android_app.ui.components.base.showSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,6 +39,7 @@ fun ExportShareEffect(
     val context = LocalContext.current
     val noEmailApp = stringResource(R.string.export_no_email_app)
     val chooserTitle = stringResource(R.string.export_chooser_title)
+    val sharedSuccessfully = stringResource(R.string.export_shared_successfully)
 
     LaunchedEffect(config) {
         config ?: return@LaunchedEffect
@@ -68,11 +71,11 @@ fun ExportShareEffect(
 
         try {
             context.startActivity(Intent.createChooser(intent, chooserTitle))
+            snackbarHostState.showSuccess(sharedSuccessfully)
+            onDone()
         } catch (_: android.content.ActivityNotFoundException) {
-            snackbarHostState.showSnackbar(noEmailApp)
+            snackbarHostState.showError(noEmailApp)
         }
-
-        onDone()
     }
 }
 
@@ -87,13 +90,18 @@ fun SaveToDeviceEffect(
     onDone: () -> Unit
 ) {
     val context = LocalContext.current
-    val savedTemplate = stringResource(R.string.export_saved_to_downloads)
+    val savedMessage = stringResource(R.string.export_saved_to_downloads)
+    val saveFailed = stringResource(R.string.export_save_failed)
 
     LaunchedEffect(config) {
         config ?: return@LaunchedEffect
         val filename = buildFilename(config)
-        withContext(Dispatchers.IO) { saveToDownloads(context, config.content, filename) }
-        snackbarHostState.showSnackbar(savedTemplate.format(filename))
+        val saved = withContext(Dispatchers.IO) { saveToDownloads(context, config.content, filename) }
+        if (saved) {
+            snackbarHostState.showSuccess(savedMessage)
+        } else {
+            snackbarHostState.showError(saveFailed)
+        }
         onDone()
     }
 }
@@ -106,20 +114,21 @@ internal fun buildFilename(config: ExportShareConfig): String {
     else "measurements_${config.measurementNames.size}_export.csv"
 }
 
-private fun saveToDownloads(context: Context, content: String, filename: String) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+private fun saveToDownloads(context: Context, content: String, filename: String): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, filename)
             put(MediaStore.Downloads.MIME_TYPE, "text/csv")
         }
         val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-        uri?.let {
-            context.contentResolver.openOutputStream(it)?.use { stream ->
-                stream.write(content.toByteArray(Charsets.UTF_8))
-            }
+            ?: return false
+        context.contentResolver.openOutputStream(uri)?.use { stream ->
+            stream.write(content.toByteArray(Charsets.UTF_8))
         }
+        true
     } else {
         val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
         File(dir, filename).writeText(content, Charsets.UTF_8)
+        true
     }
 }

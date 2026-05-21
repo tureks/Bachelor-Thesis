@@ -34,4 +34,6 @@ interface StreamMeasurementRepository {
     /** Inserts [point] and returns the generated row ID. */
     suspend fun insertVelocityPoint(point: VelocityPoint): Long
     suspend fun deleteVelocityPoints(segmentId: Int)
+    /** Atomically replaces all velocity points for [segmentId] with [points]. */
+    suspend fun replaceVelocityPoints(segmentId: Int, points: List<VelocityPoint>)
 }

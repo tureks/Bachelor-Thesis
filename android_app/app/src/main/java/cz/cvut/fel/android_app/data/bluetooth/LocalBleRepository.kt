@@ -2,7 +2,6 @@ package cz.cvut.fel.android_app.data.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -19,6 +18,7 @@ import cz.cvut.fel.android_app.domain.repository.BleRepository
 import cz.cvut.fel.android_app.domain.repository.DeviceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +36,7 @@ class LocalBleRepository(
     private val deviceRepository: DeviceRepository
 ) : BleRepository {
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     @Volatile private var gatt: BluetoothGatt? = null
 
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
@@ -85,9 +85,6 @@ class LocalBleRepository(
             }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    if (gatt.device.bondState == BluetoothDevice.BOND_NONE) {
-                        gatt.device.createBond()
-                    }
                     gatt.discoverServices()
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
@@ -234,7 +231,12 @@ class LocalBleRepository(
     }
 
     override fun connect(address: String) {
-        if (gatt != null) return
+        gatt?.let {
+            it.disconnect()
+            it.close()
+            gatt = null
+        }
+        _probeConnected.value = false
         stopScanning()
         _connectionState.value = BleConnectionState.Connecting
         gatt = bluetoothAdapter.getRemoteDevice(address).connectGatt(context, false, gattCallback)

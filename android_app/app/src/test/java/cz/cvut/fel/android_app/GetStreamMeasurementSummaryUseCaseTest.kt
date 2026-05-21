@@ -20,7 +20,7 @@ class GetStreamMeasurementSummaryUseCaseTest {
     }
 
     @Test
-    fun invoke_noSegments_returnsAllZeros() {
+    fun noSegments_returnsAllZeros_test() {
         runTest {
             val totals = useCase(measurementId = 1)
 
@@ -31,7 +31,7 @@ class GetStreamMeasurementSummaryUseCaseTest {
     }
 
     @Test
-    fun invoke_twoSegments_sumsTotalWidthAndFlow() {
+    fun twoSegments_sumsTotalWidthAndFlow_test() {
         runTest {
             repository.seedSegments(
                 segment(id = 1, measurementId = 1, segmentWidth = 1.0, depth = 0.5, segmentFlow = 0.5),
@@ -47,7 +47,7 @@ class GetStreamMeasurementSummaryUseCaseTest {
     }
 
     @Test
-    fun invoke_multipleSegments_picksMaxDepth() {
+    fun multipleSegments_picksMaxDepth_test() {
         runTest {
             repository.seedSegments(
                 segment(id = 1, measurementId = 1, depth = 0.2),

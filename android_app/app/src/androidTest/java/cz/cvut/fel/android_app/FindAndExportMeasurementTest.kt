@@ -58,7 +58,6 @@ class FindAndExportMeasurementTest {
         return id
     }
 
-    // ── search ───────────────────────────────────────────────────────────────
 
     @Test
     fun search_byName_returnsMatchingMeasurements() {
@@ -90,7 +89,6 @@ class FindAndExportMeasurementTest {
         }
     }
 
-    // ── export ───────────────────────────────────────────────────────────────
 
     @Test
     fun export_containsMeasurementName() {

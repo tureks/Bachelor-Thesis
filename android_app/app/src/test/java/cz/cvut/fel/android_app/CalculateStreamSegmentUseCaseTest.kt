@@ -16,7 +16,7 @@ class CalculateStreamSegmentUseCaseTest {
     }
 
     @Test
-    fun invoke_multiplePoints_computesAverageVelocityAndFlow() {
+    fun multiplePoints_computesAverageVelocityAndFlow_test() {
         val points = listOf(capturedPoint(1.0), capturedPoint(3.0))
         val result = useCase(segmentWidth = 2.0, depth = 0.5, points = points)
 
@@ -25,7 +25,7 @@ class CalculateStreamSegmentUseCaseTest {
     }
 
     @Test
-    fun invoke_singlePoint_velocityEqualsPoint() {
+    fun singlePoint_velocityEqualsPoint_test() {
         val points = listOf(capturedPoint(2.5))
         val result = useCase(segmentWidth = 1.0, depth = 1.0, points = points)
 
@@ -34,7 +34,7 @@ class CalculateStreamSegmentUseCaseTest {
     }
 
     @Test
-    fun invoke_emptyPoints_returnsZeroFlow() {
+    fun emptyPoints_returnsZeroFlow_test() {
         val result = useCase(segmentWidth = 1.0, depth = 1.0, points = emptyList())
 
         assertEquals(0.0, result.averageVelocity, 0.0)
@@ -42,7 +42,7 @@ class CalculateStreamSegmentUseCaseTest {
     }
 
     @Test
-    fun invoke_dimensionsScaleFlow() {
+    fun dimensionsScaleFlow_test() {
         val points = listOf(capturedPoint(2.0))
         val result = useCase(segmentWidth = 3.0, depth = 0.5, points = points)
 

@@ -18,7 +18,7 @@ class GetStreamMeasurementSummaryUseCase(
 
         return StreamMeasurementTotals(
             totalWidth = segments.sumOf { it.segmentWidth },
-            maxDepth = segments.maxOf { it.depth },
+            maxDepth = segments.maxOfOrNull { it.depth } ?: 0.0,
             totalFlow = segments.sumOf { it.segmentFlow }
         )
     }

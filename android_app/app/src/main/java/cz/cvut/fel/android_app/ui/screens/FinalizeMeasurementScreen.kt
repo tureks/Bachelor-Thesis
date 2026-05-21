@@ -11,8 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.CancelMeasurementDialog
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
@@ -33,7 +35,7 @@ fun FinalizeMeasurementScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showError(it)
             viewModel.clearError()
         }
     }
@@ -42,11 +44,11 @@ fun FinalizeMeasurementScreen(
     val unit = uiState.preferredUnit
     val totals = uiState.totals
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "Save Measurement",
@@ -194,6 +196,12 @@ fun FinalizeMeasurementScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } // Box
 
     if (showCancelDialog) {
         CancelMeasurementDialog(

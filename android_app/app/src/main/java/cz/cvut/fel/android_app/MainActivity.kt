@@ -14,7 +14,6 @@ import cz.cvut.fel.android_app.viewmodel.BleViewModel
 import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
 import cz.cvut.fel.android_app.viewmodel.HistoryViewModel
-import cz.cvut.fel.android_app.viewmodel.MeasurementDetailViewModel
 import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
 import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
@@ -26,7 +25,6 @@ class MainActivity : ComponentActivity() {
     private val deviceViewModel: DeviceViewModel by viewModels { DeviceViewModel.Factory }
     private val userViewModel: UserViewModel by viewModels { UserViewModel.Factory }
     private val historyViewModel: HistoryViewModel by viewModels { HistoryViewModel.Factory }
-    private val measurementDetailViewModel: MeasurementDetailViewModel by viewModels { MeasurementDetailViewModel.Factory }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -58,8 +56,7 @@ class MainActivity : ComponentActivity() {
                     measurementViewModel = measurementViewModel,
                     deviceViewModel = deviceViewModel,
                     historyViewModel = historyViewModel,
-                    userViewModel = userViewModel,
-                    measurementDetailViewModel = measurementDetailViewModel
+                    userViewModel = userViewModel
                 )
             }
         }

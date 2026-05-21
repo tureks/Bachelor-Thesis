@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
 import cz.cvut.fel.android_app.domain.model.Device
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.DeviceConnectionStatus
 import cz.cvut.fel.android_app.ui.components.domain.DeviceItem
 import cz.cvut.fel.android_app.viewmodel.DeviceViewModel
@@ -41,6 +43,14 @@ fun DeviceScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showError(it)
+            viewModel.clearError()
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose { viewModel.stopScan() }
@@ -66,6 +76,7 @@ fun DeviceScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { viewModel.refreshBluetoothState() }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             AppTopBar(title = "Connect Device", onNavigateBack = onNavigateBack)
@@ -194,35 +205,14 @@ fun DeviceScreen(
                 }
             }
 
-            uiState.error?.let { error ->
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = error,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextButton(onClick = viewModel::clearError) {
-                                Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
+
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } 
 }
 
 @Composable

@@ -9,7 +9,7 @@ class ValidateSegmentInputUseCase {
      * @param width Segment width in meters.
      * @param depth Segment depth in meters.
      * @param velocity Average velocity in m/s.
-     * @param height Measurement height as a ratio of depth (0.0–1.0)
+     * @param height Measurement height as a percentage of depth (0–100)
      * @return [ValidationResult.Success] or [ValidationResult.Error] with a human-readable message.
      */
     operator fun invoke(
@@ -32,8 +32,8 @@ class ValidateSegmentInputUseCase {
         }
         
         height?.let {
-            if (it < 0.0 || it > 1.0) {
-                return ValidationResult.Error("Relative height must be between 0.0 and 1.0 (0-100%).")
+            if (it < 0.0 || it > 100.0) {
+                return ValidationResult.Error("Measurement depth must be between 0% and 100%.")
             }
         }
 

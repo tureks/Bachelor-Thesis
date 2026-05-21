@@ -7,14 +7,41 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cz.cvut.fel.android_app.App
-import cz.cvut.fel.android_app.domain.*
-import cz.cvut.fel.android_app.domain.model.*
+import cz.cvut.fel.android_app.domain.CalculateStreamSegmentUseCase
+import cz.cvut.fel.android_app.domain.CompleteStreamMeasurementUseCase
+import cz.cvut.fel.android_app.domain.CompleteStreamSegmentUseCase
+import cz.cvut.fel.android_app.domain.GetStreamMeasurementSummaryUseCase
+import cz.cvut.fel.android_app.domain.StartStreamMeasurementUseCase
+import cz.cvut.fel.android_app.domain.UpdateStreamMeasurementUseCase
+import cz.cvut.fel.android_app.domain.UpdateStreamSegmentUseCase
+import cz.cvut.fel.android_app.domain.ValidateSegmentInputUseCase
+import cz.cvut.fel.android_app.domain.model.CapturedVelocityPoint
+import cz.cvut.fel.android_app.domain.model.Location
+import cz.cvut.fel.android_app.domain.model.MeasurementUnit
+import cz.cvut.fel.android_app.domain.model.StreamMeasurement
+import cz.cvut.fel.android_app.domain.model.StreamMeasurementTotals
+import cz.cvut.fel.android_app.domain.model.StreamSegment
+import cz.cvut.fel.android_app.domain.model.ValidationResult
+import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.repository.LocationRepository
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MeasurementUiState(
@@ -100,7 +127,7 @@ class MeasurementViewModel(
     fun startNewMeasurement() {
         viewModelScope.launch {
             try {
-                val location = locationRepository.getCurrentLocation()
+                val location = _currentLocation.value ?: locationRepository.getCurrentLocation()
                 startMeasurementUseCase()
                 measurementRepository.getDraft()?.let { draft ->
                     if (location != null) {

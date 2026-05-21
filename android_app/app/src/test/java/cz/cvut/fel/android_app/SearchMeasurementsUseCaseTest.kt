@@ -23,7 +23,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_emptyQuery_returnsAllCompletedSortedDescending() {
+    fun emptyQuery_returnsAllCompletedSortedDescending_test() {
         runTest {
             repository.seed(
                 measurement(id = 1, name = "Alpha", measureTimestamp = 1000L),
@@ -43,7 +43,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_queryMatchesName_returnsFilteredResults() {
+    fun queryMatchesName_returnsFilteredResults_test() {
         runTest {
             repository.seed(
                 measurement(id = 1, name = "River Labe"),
@@ -61,7 +61,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_queryMatchesNote_returnsResult() {
+    fun queryMatchesNote_returnsResult_test() {
         runTest {
             repository.seed(
                 measurement(id = 1, name = "Station A", note = "spring flood measurement"),
@@ -78,7 +78,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_queryIsCaseInsensitive() {
+    fun queryIsCaseInsensitive_test() {
         runTest {
             repository.seed(measurement(id = 1, name = "MORAVA"))
 
@@ -91,7 +91,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_fromTimestamp_filtersOlderMeasurements() {
+    fun fromTimestamp_filtersOlderMeasurements_test() {
         runTest {
             repository.seed(
                 measurement(id = 1, measureTimestamp = 500L),
@@ -109,7 +109,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_fromTimestamp_sortsByTimestampAscending() {
+    fun fromTimestamp_sortsByTimestampAscending_test() {
         runTest {
             repository.seed(
                 measurement(id = 1, measureTimestamp = 2000L),
@@ -126,7 +126,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_noMatchingQuery_returnsEmpty() {
+    fun noMatchingQuery_returnsEmpty_test() {
         runTest {
             repository.seed(measurement(id = 1, name = "Station A"))
 
@@ -139,7 +139,7 @@ class SearchMeasurementsUseCaseTest {
     }
 
     @Test
-    fun invoke_emptyRepository_returnsEmpty() {
+    fun emptyRepository_returnsEmpty_test() {
         runTest {
             useCase(query = "").test {
                 assertTrue(awaitItem().isEmpty())

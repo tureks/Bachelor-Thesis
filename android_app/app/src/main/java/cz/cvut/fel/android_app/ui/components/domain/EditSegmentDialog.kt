@@ -157,7 +157,7 @@ private fun PointEditRow(
     onUpdate: (VelocityPoint) -> Unit,
     onDelete: () -> Unit
 ) {
-    var velocityInput by remember { mutableStateOf(point.velocity.toString()) }
+    var velocityInput by remember { mutableStateOf(String.format(Locale.US, "%.2f", point.velocity)) }
     var heightInput by remember {
         mutableStateOf(
             String.format(Locale.US, "%.0f", point.measureHeight ?: 0.0)

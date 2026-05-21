@@ -13,7 +13,6 @@ import cz.cvut.fel.android_app.domain.repository.BleRepository
 import cz.cvut.fel.android_app.domain.repository.UserRepository
 import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -38,14 +37,10 @@ class CaptureViewModel(
     private val _manualPoints = MutableStateFlow<List<ManualVelocityPoint>>(emptyList())
     private val _currentWidth = MutableStateFlow("")
     private val _currentDepth = MutableStateFlow("")
-    private var _singlePointHeightPercent: Double = 60.0
+    private val _singlePointHeight: StateFlow<Double> = userRepository.userProfile
+        .map { (it?.singlePointHeight ?: 0.6) * 100.0 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 60.0)
     private var captureJob: Job? = null
-
-    init {
-        userRepository.userProfile
-            .onEach { profile -> _singlePointHeightPercent = (profile?.singlePointHeight ?: 0.6) * 100.0 }
-            .launchIn(viewModelScope)
-    }
 
     val uiState: StateFlow<CaptureUiState> = combine(
         _captureState,
@@ -62,7 +57,7 @@ class CaptureViewModel(
     /** Adds a point using the current window average, capped to hardware max velocity. */
     fun addManualPoint(windowAverage: Double) {
         val capped = minOf(windowAverage, VELOCITY_MAX)
-        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), capped, _singlePointHeightPercent) }
+        _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), capped, _singlePointHeight.value) }
     }
 
     fun updateManualPointHeight(id: Long, height: Double) {
@@ -80,16 +75,17 @@ class CaptureViewModel(
         captureJob?.cancel()
         captureJob = viewModelScope.launch {
             val readings = mutableListOf<Double>()
-            bleRepository.velocityReadings.collect { velocity ->
-                readings.add(velocity)
-                val progress = readings.size / 100f
-                _captureState.update { it.copy(progress = progress.coerceAtMost(1f)) }
-                if (progress >= 1f) {
-                    _captureState.update { it.copy(isCapturing = false) }
-                    _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), readings.average(), _singlePointHeightPercent) }
-                    cancel()
+            bleRepository.velocityReadings
+                .take(100)
+                .onEach { velocity ->
+                    readings.add(velocity)
+                    _captureState.update { it.copy(progress = (readings.size / 100f).coerceAtMost(1f)) }
                 }
-            }
+                .collect()
+            _captureState.update { it.copy(isCapturing = false) }
+            val nonZero = readings.filter { it > 0.0 }
+            val avg = if (nonZero.isEmpty()) 0.0 else nonZero.average()
+            _manualPoints.update { it + ManualVelocityPoint(System.currentTimeMillis(), avg, _singlePointHeight.value) }
         }
     }
 

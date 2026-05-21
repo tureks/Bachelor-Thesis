@@ -18,7 +18,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cz.cvut.fel.android_app.domain.model.BleConnectionState
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.*
 import cz.cvut.fel.android_app.viewmodel.BleViewModel
 import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
@@ -43,6 +45,7 @@ fun MeasurementScreen(
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler { onNavigateBack() }
 
@@ -60,11 +63,15 @@ fun MeasurementScreen(
     }
 
     LaunchedEffect(measureState.error) {
-        measureState.error?.let { measurementViewModel.clearError() }
+        measureState.error?.let {
+            snackbarHostState.showError(it)
+            measurementViewModel.clearError()
+        }
     }
 
     val segmentNumber = measureState.editingSegment?.segmentNumber ?: (measureState.segments.size + 1)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
@@ -238,6 +245,12 @@ fun MeasurementScreen(
             }
         }
     }
+
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } 
 
     if (showCancelDialog) {
         CancelMeasurementDialog(

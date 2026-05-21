@@ -24,9 +24,8 @@ fun EditPointDialog(
     onUpdateHeight: (Double) -> Unit,
     onDelete: () -> Unit
 ) {
-    val initialHeight = point.height
     var heightInput by remember {
-        mutableStateOf(String.format(Locale.US, "%.0f", initialHeight))
+        mutableStateOf(String.format(Locale.US, "%.0f", point.height))
     }
 
     Dialog(onDismissRequest = onDismiss) {

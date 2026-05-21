@@ -164,6 +164,7 @@ class MeasurementDetailViewModel(
     }
 
     fun exportMeasurement() {
+        if (_content.value.measurement == null) return
         viewModelScope.launch {
             try { _export.update { it.copy(content = generateExportContent()) } }
             catch (e: Exception) { _error.value = "Export failed: ${e.message ?: "Unknown error"}" }
@@ -171,6 +172,7 @@ class MeasurementDetailViewModel(
     }
 
     fun downloadMeasurement() {
+        if (_content.value.measurement == null) return
         viewModelScope.launch {
             try { _export.update { it.copy(downloadContent = generateExportContent()) } }
             catch (e: Exception) { _error.value = "Export failed: ${e.message ?: "Unknown error"}" }

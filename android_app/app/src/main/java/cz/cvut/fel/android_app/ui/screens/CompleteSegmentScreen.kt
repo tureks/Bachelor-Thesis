@@ -18,10 +18,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cz.cvut.fel.android_app.ui.components.base.AppNotificationHost
 import cz.cvut.fel.android_app.ui.components.base.AppTextField
-import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.ui.components.base.AppTopBar
+import cz.cvut.fel.android_app.ui.components.base.showError
 import cz.cvut.fel.android_app.ui.components.domain.*
+import cz.cvut.fel.android_app.ui.utils.UnitConverter
 import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
@@ -49,7 +51,7 @@ fun CompleteSegmentScreen(
 
     LaunchedEffect(measureState.error) {
         measureState.error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showError(it)
             measurementViewModel.clearError()
         }
     }
@@ -62,7 +64,8 @@ fun CompleteSegmentScreen(
     val depth = captureState.currentDepth
     val unit = measureState.preferredUnit
 
-    val isValid = width.isNotEmpty() && depth.isNotEmpty() &&
+    val isValid = (width.toDoubleOrNull() ?: 0.0) > 0.0 &&
+            (depth.toDoubleOrNull() ?: 0.0) > 0.0 &&
             (selectedPointIds.isNotEmpty() || measureState.editingSegment != null)
 
     val segmentNumber = measureState.editingSegment?.segmentNumber ?: (measureState.segments.size + 1)
@@ -92,11 +95,11 @@ fun CompleteSegmentScreen(
         )
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = { focusManager.clearFocus() })
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "Segment",
@@ -211,10 +214,9 @@ fun CompleteSegmentScreen(
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Complete\nMeasurement",
+                        "Complete",
                         style = MaterialTheme.typography.labelLarge,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 16.sp
+                        textAlign = TextAlign.Center
                     )
                 }
 
@@ -236,6 +238,12 @@ fun CompleteSegmentScreen(
             }
         }
     }
+
+    AppNotificationHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+    } 
 
     if (showCancelDialog) {
         CancelMeasurementDialog(

@@ -27,12 +27,13 @@ class UserDataSource(private val context: Context) {
     }
 
     val userProfile: Flow<UserProfile?> = context.dataStore.data.map { prefs ->
-        val firstName = prefs[FIRST_NAME] ?: return@map null
-        val lastName = prefs[LAST_NAME] ?: return@map null
-        val email = prefs[EMAIL] ?: return@map null
-        val multipointMeasurement = prefs[MULTIPOINT_MEASUREMENT] ?: return@map null
-        val singlePointHeight = prefs[SINGLEPOINT_HEIGHT] ?: return@map null
+        val firstName = prefs[FIRST_NAME] ?: ""
+        val lastName = prefs[LAST_NAME] ?: ""
+        val email = prefs[EMAIL] ?: ""
+        val multipointMeasurement = prefs[MULTIPOINT_MEASUREMENT] ?: true
+        val singlePointHeight = prefs[SINGLEPOINT_HEIGHT] ?: 0.6
         val preferredUnit = prefs[PREFERRED_UNIT]?.let { MeasurementUnit.valueOf(it) } ?: MeasurementUnit.HYDROMETRIC
+        if (firstName.isEmpty() && lastName.isEmpty() && email.isEmpty() && prefs[PREFERRED_UNIT] == null) return@map null
         UserProfile(firstName, lastName, email, multipointMeasurement, singlePointHeight, preferredUnit)
     }
 

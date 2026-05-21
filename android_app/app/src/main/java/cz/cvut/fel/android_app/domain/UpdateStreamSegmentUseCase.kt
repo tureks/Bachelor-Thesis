@@ -41,11 +41,7 @@ class UpdateStreamSegmentUseCase(
         )
 
         repository.updateSegment(finalizedSegment)
-        
-        repository.deleteVelocityPoints(segment.id)
-        updatedPoints.forEach { point ->
-            repository.insertVelocityPoint(point.copy(segmentId = segment.id))
-        }
+        repository.replaceVelocityPoints(segment.id, updatedPoints.map { it.copy(segmentId = segment.id) })
 
         val measurement = repository.getById(segment.measurementId)
         if (measurement != null) {

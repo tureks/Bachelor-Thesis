@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cz.cvut.fel.android_app.ui.screens.CompleteSegmentScreen
 import cz.cvut.fel.android_app.ui.screens.DeviceScreen
 import cz.cvut.fel.android_app.ui.screens.FinalizeMeasurementScreen
@@ -47,12 +48,11 @@ fun AppNavigation(
     measurementViewModel: MeasurementViewModel,
     deviceViewModel: DeviceViewModel,
     historyViewModel: HistoryViewModel,
-    userViewModel: UserViewModel,
-    measurementDetailViewModel: MeasurementDetailViewModel
+    userViewModel: UserViewModel
 ) {
     val navigateToMain: () -> Unit = {
         navController.navigate(Screen.Main.route) {
-            popUpTo(Screen.Main.route) { inclusive = false }
+            popUpTo(Screen.Main.route) { inclusive = true }
         }
     }
 
@@ -161,10 +161,12 @@ fun AppNavigation(
                 route = Screen.MeasurementDetails.route,
                 arguments = listOf(navArgument("measurementId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val id = backStackEntry.arguments?.getInt("measurementId") ?: return@composable
+                val id = backStackEntry.arguments?.getInt("measurementId")
+                    ?.takeIf { it > 0 } ?: return@composable
+                val detailViewModel: MeasurementDetailViewModel = viewModel(factory = MeasurementDetailViewModel.Factory)
                 MeasurementDetailsScreen(
                     measurementId = id,
-                    viewModel = measurementDetailViewModel,
+                    viewModel = detailViewModel,
                     onNavigateBack = { navController.safePopBackStack() }
                 )
             }

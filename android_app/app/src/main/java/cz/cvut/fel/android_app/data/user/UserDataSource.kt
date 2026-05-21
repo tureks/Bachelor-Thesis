@@ -24,6 +24,7 @@ class UserDataSource(private val context: Context) {
         private val MULTIPOINT_MEASUREMENT = booleanPreferencesKey("multipoint_measurement")
         private val SINGLEPOINT_HEIGHT = doublePreferencesKey("singlepoint_height")
         private val PREFERRED_UNIT = stringPreferencesKey("preferred_unit")
+        private val DEVELOPER_MODE = booleanPreferencesKey("developer_mode")
     }
 
     val userProfile: Flow<UserProfile?> = context.dataStore.data.map { prefs ->
@@ -33,8 +34,9 @@ class UserDataSource(private val context: Context) {
         val multipointMeasurement = prefs[MULTIPOINT_MEASUREMENT] ?: true
         val singlePointHeight = prefs[SINGLEPOINT_HEIGHT] ?: 0.6
         val preferredUnit = prefs[PREFERRED_UNIT]?.let { MeasurementUnit.valueOf(it) } ?: MeasurementUnit.HYDROMETRIC
+        val developerMode = prefs[DEVELOPER_MODE] ?: false
         if (firstName.isEmpty() && lastName.isEmpty() && email.isEmpty() && prefs[PREFERRED_UNIT] == null) return@map null
-        UserProfile(firstName, lastName, email, multipointMeasurement, singlePointHeight, preferredUnit)
+        UserProfile(firstName, lastName, email, multipointMeasurement, singlePointHeight, preferredUnit, developerMode)
     }
 
     suspend fun saveUserProfile(profile: UserProfile) {
@@ -45,6 +47,7 @@ class UserDataSource(private val context: Context) {
             prefs[MULTIPOINT_MEASUREMENT] = profile.multipointMeasurement
             prefs[SINGLEPOINT_HEIGHT] = profile.singlePointHeight
             prefs[PREFERRED_UNIT] = profile.preferredUnit.name
+            prefs[DEVELOPER_MODE] = profile.developerMode
         }
     }
 

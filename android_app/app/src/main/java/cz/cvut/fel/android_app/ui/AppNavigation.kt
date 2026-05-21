@@ -81,6 +81,7 @@ fun AppNavigation(
                     bleViewModel = bleViewModel,
                     captureViewModel = captureViewModel,
                     measurementViewModel = measurementViewModel,
+                    userViewModel = userViewModel,
                     onNavigateToMeasurement = { navController.navigate(Screen.Measurement.route) },
                     onNavigateToDevice = { navController.navigate(Screen.Device.route) { launchSingleTop = true } },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
@@ -92,6 +93,7 @@ fun AppNavigation(
                     bleViewModel = bleViewModel,
                     captureViewModel = captureViewModel,
                     measurementViewModel = measurementViewModel,
+                    userViewModel = userViewModel,
                     onNavigateBack = {
                         val captureState = captureViewModel.uiState.value
                         val measureState = measurementViewModel.uiState.value

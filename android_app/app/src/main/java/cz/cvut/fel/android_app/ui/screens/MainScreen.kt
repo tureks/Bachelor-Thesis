@@ -23,6 +23,7 @@ import cz.cvut.fel.android_app.ui.components.base.AppTopBar
 import cz.cvut.fel.android_app.viewmodel.BleViewModel
 import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.UserViewModel
 
 private const val BATTERY_LOW_THRESHOLD = 20
 
@@ -31,6 +32,7 @@ fun MainScreen(
     bleViewModel: BleViewModel,
     captureViewModel: CaptureViewModel,
     measurementViewModel: MeasurementViewModel,
+    userViewModel: UserViewModel,
     onNavigateToMeasurement: () -> Unit,
     onNavigateToDevice: () -> Unit,
     onNavigateToHistory: () -> Unit,
@@ -38,8 +40,10 @@ fun MainScreen(
 ) {
     val bleState by bleViewModel.uiState.collectAsState()
     val measureState by measurementViewModel.uiState.collectAsState()
-    val isConnected = bleState.connectionState is BleConnectionState.Connected
-    val isProbeConnected = bleState.probeConnected
+    val userState by userViewModel.uiState.collectAsState()
+    val devMode = userState.profile?.developerMode ?: false
+    val isConnected = devMode || bleState.connectionState is BleConnectionState.Connected
+    val isProbeConnected = devMode || bleState.probeConnected
     var showOverwriteDialog by remember { mutableStateOf(false) }
 
     Scaffold(

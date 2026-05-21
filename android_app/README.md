@@ -4,7 +4,7 @@
 
 The app measures stream discharge (flow rate) using the mid-section method. You connect a Bluetooth flow meter, divide the stream profile into segments, capture velocity at each segment, and the app calculates total flow.
 
-**Flow:** Home → connect device → new measurement → capture segments → review → save
+**Flow:** Home → connect device → new measurement → capture segments → complete → save
 
 ---
 
@@ -12,7 +12,7 @@ The app measures stream discharge (flow rate) using the mid-section method. You 
 
 The main screen of the app. Shows your connection status in the top bar including a probe connection identifier.
 
-- **Connect / Battery** — top-right button opens the Device screen. Shows battery % when connected; turns red below 20%.
+- **Connect / Battery** — top-right button opens the Device screen. Shows battery percent when connected.
 - **Probe indicator** — blue check means that probe is attached; red triangle represents probe missing (you can still navigate but cannot capture).
 - **New Measurement** — starts a fresh measurement. If one is already in progress you'll be asked to discard it first.
 - **Continue Measurement** — appears when a measurement is in progress; resumes where you left off.

@@ -174,6 +174,27 @@ fun SettingsScreen(
                 }
             }
 
+            SettingsSection(title = "Developer") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Developer mode", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = "Bypass device and probe connection requirements",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = user?.developerMode ?: false,
+                        onCheckedChange = { viewModel.updateDeveloperMode(it) }
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
         }
     }

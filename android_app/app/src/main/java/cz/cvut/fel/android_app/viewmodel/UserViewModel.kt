@@ -60,6 +60,13 @@ class UserViewModel(
         }
     }
 
+    fun updateDeveloperMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val base = _uiState.value.profile ?: defaultProfile()
+            userRepository.saveUserProfile(base.copy(developerMode = enabled))
+        }
+    }
+
     private fun defaultProfile() = UserProfile(
         firstName = "",
         lastName = "",

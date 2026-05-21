@@ -26,6 +26,7 @@ import cz.cvut.fel.android_app.viewmodel.BleViewModel
 import cz.cvut.fel.android_app.viewmodel.CaptureViewModel
 import cz.cvut.fel.android_app.viewmodel.ManualVelocityPoint
 import cz.cvut.fel.android_app.viewmodel.MeasurementViewModel
+import cz.cvut.fel.android_app.viewmodel.UserViewModel
 import java.util.Locale
 
 @Composable
@@ -33,14 +34,17 @@ fun MeasurementScreen(
     bleViewModel: BleViewModel,
     captureViewModel: CaptureViewModel,
     measurementViewModel: MeasurementViewModel,
+    userViewModel: UserViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToCompleteSegment: () -> Unit
 ) {
     val bleState by bleViewModel.uiState.collectAsState()
     val captureState by captureViewModel.uiState.collectAsState()
     val measureState by measurementViewModel.uiState.collectAsState()
+    val userState by userViewModel.uiState.collectAsState()
+    val devMode = userState.profile?.developerMode ?: false
 
-    val isConnected = bleState.connectionState is BleConnectionState.Connected
+    val isConnected = devMode || bleState.connectionState is BleConnectionState.Connected
     var selectedPoint by remember { mutableStateOf<ManualVelocityPoint?>(null) }
     var showTimeWindowDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }

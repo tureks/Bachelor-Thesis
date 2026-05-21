@@ -6,5 +6,6 @@ data class UserProfile(
     val email: String,
     val multipointMeasurement: Boolean,
     val singlePointHeight: Double,
-    val preferredUnit: MeasurementUnit = MeasurementUnit.HYDROMETRIC
+    val preferredUnit: MeasurementUnit = MeasurementUnit.HYDROMETRIC,
+    val developerMode: Boolean = false
 )

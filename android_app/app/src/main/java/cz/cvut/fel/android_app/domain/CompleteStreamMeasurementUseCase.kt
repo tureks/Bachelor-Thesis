@@ -7,11 +7,7 @@ class CompleteStreamMeasurementUseCase(
     private val repository: StreamMeasurementRepository,
     private val getSummaryUseCase: GetStreamMeasurementSummaryUseCase
 ) {
-    /**
-     * Finalizes the measurement by computing totals.
-     * Sets status to COMPLETE.
-     * @param name name of the measurement
-     */
+    /** Aggregates segment totals, stamps GPS, and transitions DRAFT → COMPLETE. */
     suspend operator fun invoke(
         measurementId: Int,
         name: String,

@@ -3,6 +3,13 @@ package cz.cvut.fel.android_app.ui.utils
 import cz.cvut.fel.android_app.domain.model.MeasurementUnit
 import java.util.Locale
 
+/**
+ * Converts SI values (meters, m³/s) to the user-selected display unit and back.
+ *
+ * Two units are supported:
+ * - [MeasurementUnit.METRIC]: lengths in m, flow in m³/s
+ * - [MeasurementUnit.HYDROMETRIC]: lengths in cm, flow in l/s (velocity stays m/s in both)
+ */
 object UnitConverter {
 
     fun metersToDisplay(meters: Double, unit: MeasurementUnit): Double =

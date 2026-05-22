@@ -9,8 +9,7 @@ class SearchMeasurementsUseCase(
 ) {
     /**
      * Searches completed measurements in the database by name/note.
-     * When [fromTimestamp] is set, results start from that epoch-ms and are ordered ascending.
-     * Without it, results are ordered newest-first.
+     * When [fromTimestamp] is set, results start from that epoch-ms, ordered ascending. Without it, results ordered newest-first.
      */
     operator fun invoke(query: String = "", fromTimestamp: Long? = null): Flow<List<StreamMeasurement>> =
         repository.search(query, fromTimestamp)

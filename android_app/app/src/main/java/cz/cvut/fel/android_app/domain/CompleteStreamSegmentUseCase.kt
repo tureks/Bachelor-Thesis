@@ -5,15 +5,15 @@ import cz.cvut.fel.android_app.domain.model.StreamSegment
 import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 
+/** Calculates discharge, assigns the next segment number, and persists the segment and its velocity points. */
 class CompleteStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
     private val calculateUseCase: CalculateStreamSegmentUseCase
 ) {
 
     /**
-     * Handles completing and saving segment.
-     * @param segmentWidth width in meters
-     * @param depth depth in meters
+     * @param segmentWidth meters
+     * @param depth meters
      */
     suspend operator fun invoke(
         measurementId: Int,

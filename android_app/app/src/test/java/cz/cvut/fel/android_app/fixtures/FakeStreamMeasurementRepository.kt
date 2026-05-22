@@ -104,4 +104,9 @@ class FakeStreamMeasurementRepository : StreamMeasurementRepository {
 
     override suspend fun deleteVelocityPoints(segmentId: Int) =
         points.removeAll { it.segmentId == segmentId }.let {}
+
+    override suspend fun replaceVelocityPoints(segmentId: Int, points: List<VelocityPoint>) {
+        deleteVelocityPoints(segmentId)
+        points.forEach { insertVelocityPoint(it) }
+    }
 }

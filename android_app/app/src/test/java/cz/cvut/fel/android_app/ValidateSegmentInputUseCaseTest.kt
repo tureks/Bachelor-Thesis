@@ -89,8 +89,8 @@ class ValidateSegmentInputUseCaseTest {
     }
 
     @Test
-    fun heightAboveOne_returnsError_test() {
-        val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = 1.01)
+    fun heightAboveHundred_returnsError_test() {
+        val result = useCase(width = 1.0, depth = 0.5, velocity = 1.0, height = 100.01)
         assertTrue(result is ValidationResult.Error)
     }
 

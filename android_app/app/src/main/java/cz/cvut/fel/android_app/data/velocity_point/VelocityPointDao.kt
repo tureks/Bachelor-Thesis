@@ -16,6 +16,7 @@ abstract class VelocityPointDao {
     @Query("DELETE FROM velocity_point WHERE segment_id = :segmentId")
     abstract suspend fun deleteBySegmentId(segmentId: Int)
 
+    /** Atomically deletes all existing points for [segmentId] and inserts [points] as replacements. */
     @Transaction
     open suspend fun replacePoints(segmentId: Int, points: List<VelocityPointEntity>) {
         deleteBySegmentId(segmentId)

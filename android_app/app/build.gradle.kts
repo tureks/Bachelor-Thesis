@@ -2,6 +2,29 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("org.jetbrains.dokka")
+}
+
+tasks.dokkaHtml {
+    moduleName.set("Stream Measurement App")
+    dokkaSourceSets {
+        create("main") {
+            sourceRoots.from(file("src/main/java"))
+            includes.from(rootProject.file("MODULE.md"))
+            reportUndocumented.set(false)
+
+            perPackageOption { matchingRegex.set(".*\\.data\\.device");        suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.data\\.stream_segment"); suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.data\\.velocity_point"); suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.data\\.user");           suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.ui\\.theme");            suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.ui\\.screens");          suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.ui\\.components.*");     suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.ui\\.utils");            suppress.set(true) }
+            perPackageOption { matchingRegex.set(".*\\.ui");                    suppress.set(true) }
+            perPackageOption { matchingRegex.set("cz\\.cvut\\.fel\\.android_app"); suppress.set(true) }
+        }
+    }
 }
 
 android {

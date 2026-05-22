@@ -29,6 +29,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+/**
+ * GATT client for the flow-meter BLE measuring device.
+ *
+ * Connection sequence: [connect] → service discovery → enables CCCDs (velocity → battery → status) [onDescriptorWrite] →
+ * [finishConnection] emits [BleConnectionState.Connected] and reads initial values.
+ *
+ * Velocity: UTF-8 decimal string in m/s. Battery: standard BLE 0x180F/0x2A19. Status byte: non-zero = probe (velocity sensor) attached to measuring device.
+ */
 @SuppressLint("MissingPermission")
 class LocalBleRepository(
     private val context: Context,

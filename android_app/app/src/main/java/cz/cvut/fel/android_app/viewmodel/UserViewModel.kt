@@ -53,6 +53,7 @@ class UserViewModel(
         }
     }
 
+    /** [height] is a 0.0–1.0 fraction matching [UserProfile.singlePointHeight]. */
     fun updateSinglePointHeight(height: Double) {
         viewModelScope.launch {
             val base = _uiState.value.profile ?: defaultProfile()

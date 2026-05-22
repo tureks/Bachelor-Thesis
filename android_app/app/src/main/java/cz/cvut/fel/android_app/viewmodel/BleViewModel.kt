@@ -21,10 +21,16 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 
+/** Maximum velocity the probe (velocity sensor) can measure in m/s. */
 const val VELOCITY_MAX = 5.0
 
 data class VelocityReading(val velocity: Double, val timestamp: Long)
 
+/**
+ * @property timeWindow averaging window length in seconds
+ * @property windowAverage mean of non-zero readings within [timeWindow]; updated ~every 1.2 s
+ * @property recentReadings readings within [timeWindow] for graph display
+ */
 data class BleUiState(
     val connectionState: BleConnectionState = BleConnectionState.Idle,
     val batteryLevel: Int = 0,
@@ -38,6 +44,11 @@ data class BleUiState(
     val velocityOverLimit: Boolean = false
 )
 
+/**
+ * Live state of the BLE measuring device with time-windowed velocity statistics.
+ * [windowAverageFlow] averages non-zero readings within the window (sampled every 1.2 s);
+ * leading zeros are skipped so the average starts at the first positive reading.
+ */
 class BleViewModel(private val bleRepository: BleRepository) : ViewModel() {
 
     private val _timeWindow = MutableStateFlow(10)

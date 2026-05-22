@@ -12,6 +12,7 @@ interface StreamMeasurementDao {
     @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE status = 'COMPLETE' AND (:query = '' OR name LIKE '%' || :query || '%' OR COALESCE(note, '') LIKE '%' || :query || '%') ORDER BY measure_timestamp DESC")
     fun search(query: String): Flow<List<StreamMeasurementEntity>>
 
+    /** [search] that filters [from] epoch ms onward and orders ASC. */
     @Query("SELECT id, name, note, measure_timestamp, gps_lat, gps_long, total_width, max_depth, total_flow, status FROM stream_measurement WHERE status = 'COMPLETE' AND (:query = '' OR name LIKE '%' || :query || '%' OR COALESCE(note, '') LIKE '%' || :query || '%') AND measure_timestamp >= :from ORDER BY measure_timestamp ASC")
     fun searchFromDate(query: String, from: Long): Flow<List<StreamMeasurementEntity>>
 

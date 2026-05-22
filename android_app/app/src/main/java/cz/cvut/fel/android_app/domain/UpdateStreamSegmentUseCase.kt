@@ -5,6 +5,7 @@ import cz.cvut.fel.android_app.domain.model.VelocityPoint
 import cz.cvut.fel.android_app.domain.model.ValidationResult
 import cz.cvut.fel.android_app.domain.repository.StreamMeasurementRepository
 
+/** Validates, recomputes discharge, replaces velocity points, and refreshes measurement totals. */
 class UpdateStreamSegmentUseCase(
     private val repository: StreamMeasurementRepository,
     private val validator: ValidateSegmentInputUseCase,
@@ -13,7 +14,7 @@ class UpdateStreamSegmentUseCase(
     /**
      * Validates, recalculates, and persists an edited segment and its velocity points.
      * Refreshes the parent measurement totals.
-     * @param segment segment to update; [StreamSegment.segmentWidth] and [StreamSegment.depth] in meters
+     * @param segment updated segment; [StreamSegment.segmentWidth] and [StreamSegment.depth] in meters
      * @param updatedPoints replacement velocity points for the segment
      * @return [ValidationResult.Success] or [ValidationResult.Error] with a human-readable message
      */

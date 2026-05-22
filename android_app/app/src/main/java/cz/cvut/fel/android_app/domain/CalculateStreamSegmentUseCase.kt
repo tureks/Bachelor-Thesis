@@ -3,14 +3,14 @@ package cz.cvut.fel.android_app.domain
 import cz.cvut.fel.android_app.domain.model.CapturedVelocityPoint
 import cz.cvut.fel.android_app.domain.model.StreamSegmentResult
 
+/** Computes partial discharge. */
 class CalculateStreamSegmentUseCase {
 
     /**
-     * Counts flow based on velocity points using mid-section method.
-     * @param segmentWidth segment width in meters
-     * @param depth water depth in meters
-     * @param points captured velocity points for this segment
-     * @return [StreamSegmentResult] with computed flow in m³/s
+     * @param segmentWidth width in meters
+     * @param depth depth in meters
+     * @param points velocity readings for this strip
+     * @return [StreamSegmentResult] with flow in m³/s
      */
     operator fun invoke(
         segmentWidth: Double,

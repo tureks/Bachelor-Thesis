@@ -14,6 +14,10 @@ import cz.cvut.fel.android_app.domain.repository.DeviceRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * @property hasScanned true once a scan has been started; distinguishes "no results" from "never scanned"
+ * @property connectingAddress MAC address of the device currently being connected to
+ */
 data class DeviceUiState(
     val scannedDevices: List<Device> = emptyList(),
     val knownDevices: List<Device> = emptyList(),

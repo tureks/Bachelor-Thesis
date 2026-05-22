@@ -39,6 +39,11 @@ data class HistoryUiState(
     val error: String? = null
 )
 
+/**
+ * History list with search, date filter, pagination, and bulk export.
+ * Pagination ([PAGE_SIZE] entries) is bypassed when any filter is active.
+ * Export stores CSV in [HistoryUiState.exportContent] / [downloadContent], triggered by UI.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val searchMeasurementsUseCase: SearchMeasurementsUseCase,

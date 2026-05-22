@@ -17,6 +17,11 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
+/**
+ * [LocationRepository] backed by [FusedLocationProviderClient].
+ * [observeLocation] uses high-accuracy updates.
+ * [getCurrentLocation] reads [FusedLocationProviderClient.lastLocation].
+ */
 class AndroidLocationRepository(
     private val context: Context,
     private val client: FusedLocationProviderClient

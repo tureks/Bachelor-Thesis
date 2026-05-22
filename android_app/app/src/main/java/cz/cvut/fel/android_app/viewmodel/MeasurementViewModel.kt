@@ -55,6 +55,11 @@ data class MeasurementUiState(
     val error: String? = null
 )
 
+/**
+ * Active DRAFT measurement lifecycle: start → add segments → finalize or cancel.
+ * segment/totals flows re-subscribe on draft changes.
+ * [completeSegment] handles both new segments and edits depending on [MeasurementUiState.editingSegment].
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MeasurementViewModel(
     private val startMeasurementUseCase: StartStreamMeasurementUseCase,

@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.Flow
 
 interface BleRepository {
     val connectionState: Flow<BleConnectionState>
-    /** Emits velocity readings in m/s as they arrive from the connected probe. */
+    /** Emits velocity readings in m/s as they arrive from the connected measuring device. */
     val velocityReadings: Flow<Double>
     val batteryLevel: Flow<Int>
-    /** True when the probe accessory is physically attached to the BLE device. */
+    /** True when the probe (velocity sensor) is physically attached to the measuring device by wire. */
     val probeConnected: Flow<Boolean>
     val scannedDevices: Flow<List<Device>>
 

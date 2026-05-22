@@ -1,6 +1,6 @@
 # Bachelor Thesis — Stream Flow Measurement System
 
-System for measuring stream discharge (flow rate) using the mid-section velocity-area method.
+System for measuring stream flow rate using the velocity-area method.
 Consists of two software components: an Android app and firmware for the BLE measuring device.
 
 ---
@@ -14,8 +14,8 @@ Jetpack Compose app that connects to the measuring device over BLE, guides the u
 
 ---
 
-## Firmware — `waterFlow/`
+## Firmware — `water_flow/`
 
-Arduino sketch for the nRF52-based BLE measuring device. Reads the velocity probe via pulse counting and streams data to the Android app.
+Arduino sketch for the Seeed XIAO nRF52840 measuring device. Reads the velocity probe via pulse counting and streams data to the Android app.
 
-- **Programmer guide:** [`waterFlow/README.md`](waterFlow/README.md)
+- **Programmer guide:** [`water_flow/README.md`](water_flow/README.md)

@@ -6,19 +6,21 @@
 #define SIGNAL_PIN D8
 #define BUTTON_PIN D9
 #define LONG_PRESS_MS 1000
-#define NO_PULSE_TIMEOUT_MS 90
-#define K 0.01941f
+#define NO_PULSE_TIMEOUT_MS 70
+#define K 0.02728f
 
-volatile uint32_t pulse_count = 0;
-volatile uint32_t rotation_time = 0;
-volatile uint32_t first_pulse_time = 0;
-volatile bool new_rotation = false;
+volatile uint32_t pulse_differences[4] = {0, 0, 0, 0};
+volatile uint8_t pulse_index = 0;
+volatile uint32_t last_pulse_time = 0;
+volatile bool new_pulse = false;
 
 static float last_velocity = 0;
 static uint32_t last_status_time = 0;
 static uint32_t last_send_time = 0;
 static uint32_t last_battery_time = 0;
-static uint32_t last_pulse_time = 0;
+static uint32_t last_pulse_process_time = 0;
+static float vel_sum = 0.0f;
+static int   vel_count = 0;
 
 void go_to_deep_sleep() {
     Serial.println("Going to deep sleep. Press button to wake up.");
@@ -35,22 +37,26 @@ void go_to_deep_sleep() {
     pinMode(BUTTON_PIN, INPUT_PULLUP_SENSE);
 
     NRF_POWER->SYSTEMOFF = 1;
-    while (1);  
+    while (1);
 }
 
 bool is_device_connected() {
-    return digitalRead(DEVICE_PIN) == LOW; 
+    return digitalRead(DEVICE_PIN) == LOW;
 }
 
 void check_button() {
     if (digitalRead(BUTTON_PIN) == LOW) {
+        delay(20);
+        if (digitalRead(BUTTON_PIN) != LOW) return;
+
         uint32_t press_start = millis();
         while (digitalRead(BUTTON_PIN) == LOW);
+        delay(20);
+
         uint32_t duration = millis() - press_start;
 
         if (duration >= LONG_PRESS_MS) {
             go_to_deep_sleep();
-
         } else {
             if (!ble_is_advertising() && !ble_is_connected()) {
                 ble_start_advertising();
@@ -66,7 +72,7 @@ float read_voltage() {
     digitalWrite(VBAT_ENABLE, LOW);
     delay(50);
     analogReadResolution(12);
-    
+
     float sum = 0;
     for (int i = 0; i < 16; i++) {
         sum += analogRead(PIN_VBAT);
@@ -85,7 +91,7 @@ float read_voltage() {
 }
 
 uint8_t voltage_to_percent(float voltage) {
-    // Li-Ion discharge curve (3.0V cutoff, 4.2V max)
+    // Li-Ion discharge
     static const float v[] = {4.20, 4.15, 4.10, 4.05, 4.00, 3.95,
                                3.90, 3.85, 3.80, 3.75, 3.70, 3.65,
                                3.60, 3.55, 3.50, 3.45, 3.40, 3.30,
@@ -132,15 +138,11 @@ uint8_t read_battery_percent() {
 }
 
 void on_falling_edge() {
-    pulse_count++;
-    if (pulse_count == 1) {
-        first_pulse_time = micros();
-    }
-    if (pulse_count >= 4) {
-        rotation_time = micros() - first_pulse_time;
-        pulse_count = 0;
-        new_rotation = true;
-    }
+    uint32_t now = micros();
+    pulse_index = (pulse_index + 1) % 4;
+    pulse_differences[pulse_index] = now - last_pulse_time;
+    last_pulse_time = now;
+    new_pulse = true;
 }
 
 void setup() {
@@ -154,6 +156,13 @@ void setup() {
     battery_callback = read_battery_percent;
     status_callback = is_device_connected;
     read_battery_percent();
+
+    for (int i = 0; i < 4; i++) {
+        pulse_differences[i] = NO_PULSE_TIMEOUT_MS * 1000;
+    }
+
+    last_pulse_time = micros();
+    last_pulse_process_time = millis();
 
     attachInterrupt(digitalPinToInterrupt(SIGNAL_PIN), on_falling_edge, FALLING);
 
@@ -175,31 +184,54 @@ void loop() {
         go_to_deep_sleep();
     }
 
-    if (new_rotation) {
-        new_rotation = false;
-        noInterrupts();
-        uint32_t t = rotation_time;
-        interrupts();
+    if (new_pulse) {
+        uint32_t rotation_time = []() {
+            uint32_t sum = 0;
 
-        float rps = 1000000.0f / t;
-        last_velocity = K * rps;
-        last_pulse_time = millis();
+            noInterrupts();
+            for (int i = 0; i < 4; i++) {
+                sum += pulse_differences[i];
+            }
+            new_pulse = false;
+            interrupts();
 
-        Serial.print("velocity: ");
-        Serial.print(last_velocity, 2);
-        Serial.println(" m/s");
+            return sum;
+        }();
+
+        if (rotation_time > 0) {
+            float rps = 1000000.0f / rotation_time;
+            last_velocity = K * rps;
+
+            last_pulse_process_time = millis();
+
+            vel_sum += last_velocity;
+            vel_count++;
+
+            Serial.print("velocity: ");
+            Serial.print(last_velocity, 2);
+            Serial.println(" m/s");
+        }
     }
 
     if (millis() - last_send_time >= 100) {
         last_send_time = millis();
-        if (millis() - last_pulse_time > NO_PULSE_TIMEOUT_MS) {
+
+        if (millis() - last_pulse_process_time > NO_PULSE_TIMEOUT_MS) {
+            last_velocity = 0.0f;
             ble_send_velocity(0);
+            vel_sum   = 0.0f;
+            vel_count = 0;
         } else {
+            if (vel_count > 0) {
+                last_velocity = vel_sum / vel_count;
+                vel_sum   = 0.0f;
+                vel_count = 0;
+            }
             ble_send_velocity(last_velocity);
         }
     }
 
-    if (millis() - last_battery_time >= 30000) {
+    if (millis() - last_battery_time >= 10000) {
         last_battery_time = millis();
         ble_send_battery(read_battery_percent());
     }

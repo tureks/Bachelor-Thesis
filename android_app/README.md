@@ -1,6 +1,6 @@
-# Water Flow 
+# Stream Measurement App
 
-The app measures flow rate a water courses using the mid-section method. You connect a Bluetooth flow meter, divide the stream profile into segments, capture velocity at each segment, and the app calculates total flow.
+The app measures flow rate of water courses using the mid-section method. You connect a Bluetooth flow meter, divide the stream profile into segments, capture velocity at each segment, and the app calculates total flow.
 
 **Flow:** Home → connect device → new measurement → capture segments → complete → save
 
@@ -25,7 +25,7 @@ The main screen of the app. Shows your connection status in the top bar includin
 
 Scan devices and connect to the flow meter over Bluetooth.
 
-1. grant Bluetooth permission and enable Bluetooth.
+1. Grant Bluetooth permission and enable Bluetooth.
 2. **Scan** to discover nearby devices. Previously connected devices appear at the top.
 3. Tap a device to connect. Tap it again to disconnect.
 
@@ -37,7 +37,7 @@ The connected device banner turns blue when connected.
 
 Captures velocity readings for one segment of the stream.
 
-**live window average** — the mean velocity over the selected time window. Min/Max values and a scrolling graph shown below.
+**Live window average** — the mean velocity over the selected time window. Min/Max values and a scrolling graph shown below.
 
 **Capturing a point:** Tap the velocity average or on the graph to record the current velocity point value. Points appear in the list below.
 
@@ -125,5 +125,5 @@ Enter your first name, last name, and email to provide information for export. *
 - **Multi-point** (default) — capture velocity at multiple depths per segment.
 - **Single-point** — to use standard one point measurement - predefined depth
 
-### Velocity Capture
+### Developer Mode
 - **Developer mode** — allows to start measurements without connecting to a device.

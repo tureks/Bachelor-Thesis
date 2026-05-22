@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:translateX="18"
+        android:translateY="18"
+        android:scaleX="0.36"
+        android:scaleY="0.36">
+
+        <!-- Water layer — logic from logo-mark.jsx -->
+        <path
+            android:strokeColor="#3A7EA3"
+            android:strokeWidth="4.95"
+            android:strokeAlpha="0.55"
+            android:strokeLineCap="round"
+            android:pathData="M -20 167 C 20 163, 50 163, 70 167 C 90 171, 110 171, 130 167 C 150 163, 180 164.6, 220 167" />
+        <path
+            android:strokeColor="#3A7EA3"
+            android:strokeWidth="9"
+            android:strokeLineCap="round"
+            android:pathData="M -20 175 C 20 170, 50 170, 70 175 C 90 180, 110 180, 130 175 C 150 170, 180 172, 220 175" />
+        <path
+            android:strokeColor="#1F5476"
+            android:strokeWidth="4.95"
+            android:strokeAlpha="0.65"
+            android:strokeLineCap="round"
+            android:pathData="M -20 183 C 20 179, 50 179, 70 183 C 90 187, 110 187, 130 183 C 150 179, 180 180.6, 220 183" />
+
+        <!-- Foreground pines — points calculated from logo-mark.jsx pinePoints logic -->
+
+        <!-- Left Pine (cx: 50, top: 63, w: 50, tiers: 3) -->
+        <path
+            android:fillColor="#1F3A2C"
+            android:strokeColor="#1F3A2C"
+            android:strokeWidth="2.4"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round"
+            android:pathData="M 50 63 L 62.5 98.53 L 53.75 95.8 L 53.375 91.7 L 68.75 125.86 L 55.625 123.13 L 54.5 119.03 L 75 153.2 L 25 153.2 L 45.5 119.03 L 44.375 123.13 L 31.25 125.86 L 46.625 91.7 L 46.25 95.8 L 37.5 98.53 Z" />
+
+        <!-- Center Pine (cx: 100, top: 35, w: 64, tiers: 4) -->
+        <path
+            android:fillColor="#0F2418"
+            android:strokeColor="#0F2418"
+            android:strokeWidth="2.4"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round"
+            android:pathData="M 100 35 L 116 70.75 L 104.8 68 L 103.84 63.875 L 121.333 98.25 L 106.4 95.5 L 104.8 91.375 L 126.666 125.75 L 108 123 L 105.76 118.875 L 132 153.25 L 68 153.25 L 94.24 118.875 L 92 123 L 73.333 125.75 L 95.2 91.375 L 93.6 95.5 L 78.666 98.25 L 96.16 63.875 L 95.2 68 L 84 70.75 Z" />
+
+        <!-- Right Pine (cx: 150, top: 63, w: 50, tiers: 3) -->
+        <path
+            android:fillColor="#1F3A2C"
+            android:strokeColor="#1F3A2C"
+            android:strokeWidth="2.4"
+            android:strokeLineJoin="round"
+            android:strokeLineCap="round"
+            android:pathData="M 150 63 L 162.5 98.53 L 153.75 95.8 L 153.375 91.7 L 168.75 125.86 L 155.625 123.13 L 154.5 119.03 L 175 153.2 L 125 153.2 L 145.5 119.03 L 144.375 123.13 L 131.25 125.86 L 146.625 91.7 L 146.25 95.8 L 137.5 98.53 Z" />
+
+    </group>
+
+</vector>

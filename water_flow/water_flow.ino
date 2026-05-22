@@ -1,0 +1,247 @@
+#include "ble_control.h"
+#include <Adafruit_TinyUSB.h>
+#include <nrf_wdt.h>
+
+#define DEVICE_PIN D7
+#define SIGNAL_PIN D8
+#define BUTTON_PIN D9
+#define LONG_PRESS_MS 1000
+#define NO_PULSE_TIMEOUT_MS 70
+#define K 0.02728f
+
+volatile uint32_t pulse_differences[4] = {0, 0, 0, 0};
+volatile uint8_t pulse_index = 0;
+volatile uint32_t last_pulse_time = 0;
+volatile bool new_pulse = false;
+
+static float last_velocity = 0;
+static uint32_t last_status_time = 0;
+static uint32_t last_send_time = 0;
+static uint32_t last_battery_time = 0;
+static uint32_t last_pulse_process_time = 0;
+static float vel_sum = 0.0f;
+static int   vel_count = 0;
+
+void go_to_deep_sleep() {
+    Serial.println("Going to deep sleep. Press button to wake up.");
+    Serial.flush();
+    delay(100);
+
+    detachInterrupt(digitalPinToInterrupt(SIGNAL_PIN));
+
+    ble_shutdown();
+
+    pinMode(VBAT_ENABLE, OUTPUT);
+    digitalWrite(VBAT_ENABLE, LOW);
+
+    pinMode(BUTTON_PIN, INPUT_PULLUP_SENSE);
+
+    NRF_POWER->SYSTEMOFF = 1;
+    while (1);
+}
+
+bool is_device_connected() {
+    return digitalRead(DEVICE_PIN) == LOW;
+}
+
+void check_button() {
+    if (digitalRead(BUTTON_PIN) == LOW) {
+        delay(20);
+        if (digitalRead(BUTTON_PIN) != LOW) return;
+
+        uint32_t press_start = millis();
+        while (digitalRead(BUTTON_PIN) == LOW);
+        delay(20);
+
+        uint32_t duration = millis() - press_start;
+
+        if (duration >= LONG_PRESS_MS) {
+            go_to_deep_sleep();
+        } else {
+            if (!ble_is_advertising() && !ble_is_connected()) {
+                ble_start_advertising();
+            } else if (ble_is_advertising()) {
+                ble_stop_advertising();
+            }
+        }
+    }
+}
+
+float read_voltage() {
+    pinMode(VBAT_ENABLE, OUTPUT);
+    digitalWrite(VBAT_ENABLE, LOW);
+    delay(50);
+    analogReadResolution(12);
+
+    float sum = 0;
+    for (int i = 0; i < 16; i++) {
+        sum += analogRead(PIN_VBAT);
+        delay(3);
+    }
+    float raw = sum / 16.0f;
+    digitalWrite(VBAT_ENABLE, HIGH);
+
+    float voltage = raw * 3.6f / 4096.0f * 3.0f;
+    Serial.print("ADC raw: ");
+    Serial.print(raw);
+    Serial.print(" | Voltage: ");
+    Serial.print(voltage, 2);
+    Serial.print("V | Battery: ");
+    return voltage;
+}
+
+uint8_t voltage_to_percent(float voltage) {
+    // Li-Ion discharge
+    static const float v[] = {4.20, 4.15, 4.10, 4.05, 4.00, 3.95,
+                               3.90, 3.85, 3.80, 3.75, 3.70, 3.65,
+                               3.60, 3.55, 3.50, 3.45, 3.40, 3.30,
+                               3.20, 3.10, 3.00};
+    static const uint8_t p[] = {100, 98, 95, 91, 86, 81,
+                                  76, 70, 64, 58, 52, 46,
+                                  40, 34, 28, 22, 16, 10,
+                                   5,  2,  0};
+    static const int n = 21;
+
+    if (voltage >= v[0])   return 100;
+    if (voltage <= v[n-1]) return 0;
+
+    for (int i = 0; i < n - 1; i++) {
+        if (voltage >= v[i+1]) {
+            float t = (voltage - v[i+1]) / (v[i] - v[i+1]);
+            return (uint8_t)(p[i+1] + t * (p[i] - p[i+1]));
+        }
+    }
+    return 0;
+}
+
+uint8_t read_battery_percent() {
+    float voltage = read_voltage();
+
+    // Low battery check
+    if (voltage < 3.0f) {
+        Serial.println("LOW BATTERY!");
+        pinMode(LED_BUILTIN, OUTPUT);
+        for (int i = 0; i < 3; i++) {
+            digitalWrite(LED_BUILTIN, LOW);
+            delay(200);
+            digitalWrite(LED_BUILTIN, HIGH);
+            delay(200);
+            NRF_WDT->RR[0] = WDT_RR_RR_Reload;
+        }
+        go_to_deep_sleep();
+    }
+
+    uint8_t percent = voltage_to_percent(voltage);
+    Serial.print(percent);
+    Serial.println("%");
+    return percent;
+}
+
+void on_falling_edge() {
+    uint32_t now = micros();
+    pulse_index = (pulse_index + 1) % 4;
+    pulse_differences[pulse_index] = now - last_pulse_time;
+    last_pulse_time = now;
+    new_pulse = true;
+}
+
+void setup() {
+    Serial.begin(115200);
+    delay(500);
+
+    pinMode(SIGNAL_PIN, INPUT);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(DEVICE_PIN, INPUT_PULLUP);
+
+    battery_callback = read_battery_percent;
+    status_callback = is_device_connected;
+    read_battery_percent();
+
+    for (int i = 0; i < 4; i++) {
+        pulse_differences[i] = NO_PULSE_TIMEOUT_MS * 1000;
+    }
+
+    last_pulse_time = micros();
+    last_pulse_process_time = millis();
+
+    attachInterrupt(digitalPinToInterrupt(SIGNAL_PIN), on_falling_edge, FALLING);
+
+    ble_setup();
+    Serial.println("Ready!");
+    ble_start_advertising();
+
+    NRF_WDT->CONFIG = 0x01;
+    NRF_WDT->CRV = 32768 * 10;
+    NRF_WDT->RREN = 0x01;
+    NRF_WDT->TASKS_START = 1;
+}
+
+void loop() {
+    check_button();
+    ble_loop();
+
+    if (!ble_is_enabled()) {
+        go_to_deep_sleep();
+    }
+
+    if (new_pulse) {
+        uint32_t rotation_time = []() {
+            uint32_t sum = 0;
+
+            noInterrupts();
+            for (int i = 0; i < 4; i++) {
+                sum += pulse_differences[i];
+            }
+            new_pulse = false;
+            interrupts();
+
+            return sum;
+        }();
+
+        if (rotation_time > 0) {
+            float rps = 1000000.0f / rotation_time;
+            last_velocity = K * rps;
+
+            last_pulse_process_time = millis();
+
+            vel_sum += last_velocity;
+            vel_count++;
+
+            Serial.print("velocity: ");
+            Serial.print(last_velocity, 2);
+            Serial.println(" m/s");
+        }
+    }
+
+    if (millis() - last_send_time >= 100) {
+        last_send_time = millis();
+
+        if (millis() - last_pulse_process_time > NO_PULSE_TIMEOUT_MS) {
+            last_velocity = 0.0f;
+            ble_send_velocity(0);
+            vel_sum   = 0.0f;
+            vel_count = 0;
+        } else {
+            if (vel_count > 0) {
+                last_velocity = vel_sum / vel_count;
+                vel_sum   = 0.0f;
+                vel_count = 0;
+            }
+            ble_send_velocity(last_velocity);
+        }
+    }
+
+    if (millis() - last_battery_time >= 10000) {
+        last_battery_time = millis();
+        ble_send_battery(read_battery_percent());
+    }
+
+    if (millis() - last_status_time >= 1000) {
+        last_status_time = millis();
+        bool probe = is_device_connected();
+        ble_send_status(probe);
+    }
+
+    delay(1);
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload;
+}
